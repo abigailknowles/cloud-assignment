@@ -34,6 +34,9 @@ services:
       - ./scripts:/scripts
     restart: "no"
     entrypoint: [ "bash", "/scripts/mongo_setup.sh"]
+
+
+
   node1:
     build: ./nodejs
     ports:

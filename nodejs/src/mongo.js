@@ -1,4 +1,3 @@
-
 //Object data modelling library for mongo
 const mongoose = require('mongoose');
 
@@ -51,15 +50,15 @@ var analyticsModel = mongoose.model('Analytics', analyticsSchema, 'analytics');
 
 
 app.get('/', (req, res) => {
-  analyticsModel.find({}, 'item price quantity lastName', (err, analytics) => {
+  analyticsModel.find({}, 'username title_id user_action', (err, analytics) => {
     if (err) return handleError(err);
     res.send(JSON.stringify(analytics))
   })
 })
 
 app.post('/', (req, res) => {
-  var awesome_instance = new SomeModel(req.body);
-  awesome_instance.save(function (err) {
+  var new_analytics_instance = new analyticsModel(req.body);
+  new_analytics_instance.save(function (err) {
     if (err) res.send('Error');
     res.send(JSON.stringify(req.body))
   });
