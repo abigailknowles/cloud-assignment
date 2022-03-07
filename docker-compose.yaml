@@ -57,6 +57,5 @@ services:
      - node2
      - node3
 
-     
 
 
