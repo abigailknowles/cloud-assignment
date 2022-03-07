@@ -36,8 +36,25 @@ services:
     entrypoint: [ "bash", "/scripts/mongo_setup.sh"]
 
 
-
   node1:
     build: ./nodejs
     ports:
       - "81:3000"
+  node2:
+    build: ./nodejs
+    ports:
+      - "82:3000"
+  node3:
+    build: ./nodejs
+    ports:
+      - "83:3000"
+  nginx:
+    build: ./nginx
+    ports:
+      - "80:80"
+    depends_on:
+     - node1
+     - node2
+     - node3
+
+
