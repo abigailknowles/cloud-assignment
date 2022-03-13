@@ -37,16 +37,16 @@ var Schema = mongoose.Schema;
 
 var analyticsSchema = new Schema({
   _id: Number,
+  accountId: Number,
   username: String,
-  title_id: Number,
-  user_action: String,
-  date_and_time: String,
-  point_of_interaction: String,
-  type_of_interaction: String
+  titleId: Number,
+  userAction: String,
+  dateAndTime: String,
+  pointOfInteraction: String,
+  typeOfInteraction: String
 });
 
 var analyticsModel = mongoose.model('Analytics', analyticsSchema, 'analytics');
-
 
 
 app.get('/', (req, res) => {
