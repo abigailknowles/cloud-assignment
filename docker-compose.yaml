@@ -102,7 +102,7 @@ services:
   haproxy: 
     image: haproxy:1.7 
     volumes: 
-      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro 
+      - ./rabbitmq/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro 
     depends_on: 
       - rabbitmq-stats 
       - rabbitmq-queue-one
