@@ -2,9 +2,6 @@
 const mongoose = require('mongoose');
 var amqp = require('amqplib/callback_api');
 
-//Mongo db client library
-//const MongoClient  = require('mongodb');
-
 //Express web service library
 const express = require('express')
 
