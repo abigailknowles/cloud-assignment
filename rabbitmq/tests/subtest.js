@@ -24,9 +24,13 @@ amqp.connect('amqp://test:test@127.0.0.1', function (error0, connection) {
             channel.bindQueue(q.queue, exchange, '');
 
             channel.consume(q.queue, function (msg) {
+
+
                 if (msg.content) {
                     console.log(" [x] %s", msg.content.toString());
                 }
+
+
             }, {
                 noAck: true
             });
