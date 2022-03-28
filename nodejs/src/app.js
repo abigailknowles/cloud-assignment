@@ -1,8 +1,6 @@
 //Object data modelling library for mongo
 const mongoose = require('mongoose');
-
-//Mongo db client library
-//const MongoClient  = require('mongodb');
+var amqp = require('amqplib/callback_api');
 
 //Express web service library
 const express = require('express')
@@ -19,7 +17,35 @@ const connectionString = 'mongodb://localmongo1:27017,localmongo2:27017,localmon
 
 setInterval(function () {
 
-  console.log(`Intervals are used to fire a function for the lifetime of an application.`);
+  amqp.connect('amqp://test:test@cloud-assignment_haproxy_1', function (error0, connection) {
+
+    //if connection failed throw error
+    if (error0) {
+      throw error0;
+    }
+
+    //create a channel if connected and send hello world to the logs Q
+    connection.createChannel(function (error1, channel) {
+      if (error1) {
+        throw error1;
+      }
+      var exchange = 'logs';
+      var msg = 'Hello World!';
+
+      channel.assertExchange(exchange, 'fanout', {
+        durable: false
+      });
+
+      channel.publish(exchange, '', Buffer.from(msg));
+      console.log(" [x] Sent %s", msg);
+    });
+
+
+    //in 1/2 a second force close the connection
+    setTimeout(function () {
+      connection.close();
+    }, 500);
+  });
 
 }, 3000);
 
@@ -76,4 +102,42 @@ app.delete('/', (req, res) => {
 app.listen(port, () => {
   console.log(`Express Application listening at port ` + port)
 })
+
+amqp.connect('amqp://test:test@cloud-assignment_haproxy_1', function (error0, connection) {
+  if (error0) {
+    throw error0;
+  }
+  connection.createChannel(function (error1, channel) {
+    if (error1) {
+      throw error1;
+    }
+    var exchange = 'logs';
+
+    channel.assertExchange(exchange, 'fanout', {
+      durable: false
+    });
+
+    channel.assertQueue('', {
+      exclusive: true
+    }, function (error2, q) {
+      if (error2) {
+        throw error2;
+      }
+      console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", q.queue);
+      channel.bindQueue(q.queue, exchange, '');
+
+      channel.consume(q.queue, function (msg) {
+
+
+        if (msg.content) {
+          console.log(" [x] %s", msg.content.toString());
+        }
+
+
+      }, {
+        noAck: true
+      });
+    });
+  });
+});
 

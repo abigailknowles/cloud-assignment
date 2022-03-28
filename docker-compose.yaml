@@ -59,7 +59,6 @@ services:
      - node2
      - node3
 
-services:
       # Message tier
   rabbitmq-stats:
     image: bitnami/rabbitmq:3.8.14
