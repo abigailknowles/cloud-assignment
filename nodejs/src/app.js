@@ -103,7 +103,7 @@ app.listen(port, () => {
   console.log(`Express Application listening at port ` + port)
 })
 
-amqp.connect('amqp://test:test@127.0.0.1', function (error0, connection) {
+amqp.connect('amqp://test:test@cloud-assignment_haproxy_1', function (error0, connection) {
   if (error0) {
     throw error0;
   }
