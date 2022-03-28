@@ -12,9 +12,13 @@ const bodyParser = require('body-parser');
 const app = express()
 const port = 3000
 
-//retrieve the hostname of the node
+//retrieve the hostname of a node
 const os = require('os');
 var nodeHost = os.hostname;
+
+//generate node id
+var nodeId = Math.floor(Math.random() * (100 - 1 + 1) + 1);
+
 //connection string listing the mongo servers. This is an alternative to using a load balancer. THIS SHOULD BE DISCUSSED IN YOUR ASSIGNMENT.
 const connectionString = 'mongodb://localmongo1:27017,localmongo2:27017,localmongo3:27017/notFLIX_DB?replicaSet=rs0';
 
@@ -51,6 +55,50 @@ setInterval(function () {
   });
 
 }, 3000);
+
+
+//bind the express web service to the port specified
+app.listen(port, () => {
+  console.log(`Express Application listening at port ` + port)
+})
+
+amqp.connect('amqp://test:test@cloud-assignment_haproxy_1', function (error0, connection) {
+  if (error0) {
+    throw error0;
+  }
+  connection.createChannel(function (error1, channel) {
+    if (error1) {
+      throw error1;
+    }
+    var exchange = 'logs';
+
+    channel.assertExchange(exchange, 'fanout', {
+      durable: false
+    });
+
+    channel.assertQueue('', {
+      exclusive: true
+    }, function (error2, q) {
+      if (error2) {
+        throw error2;
+      }
+      console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", q.queue);
+      channel.bindQueue(q.queue, exchange, '');
+
+      channel.consume(q.queue, function (msg) {
+
+
+        if (msg.content) {
+          console.log(" [x] %s", msg.content.toString());
+        }
+
+
+      }, {
+        noAck: true
+      });
+    });
+  });
+});
 
 //tell express to use the body parser. Note - This function was built into express but then moved to a seperate package.
 app.use(bodyParser.json());
@@ -101,46 +149,4 @@ app.delete('/', (req, res) => {
   res.send('Got a DELETE request at /')
 })
 
-//bind the express web service to the port specified
-app.listen(port, () => {
-  console.log(`Express Application listening at port ` + port)
-})
-
-amqp.connect('amqp://test:test@cloud-assignment_haproxy_1', function (error0, connection) {
-  if (error0) {
-    throw error0;
-  }
-  connection.createChannel(function (error1, channel) {
-    if (error1) {
-      throw error1;
-    }
-    var exchange = 'logs';
-
-    channel.assertExchange(exchange, 'fanout', {
-      durable: false
-    });
-
-    channel.assertQueue('', {
-      exclusive: true
-    }, function (error2, q) {
-      if (error2) {
-        throw error2;
-      }
-      console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", q.queue);
-      channel.bindQueue(q.queue, exchange, '');
-
-      channel.consume(q.queue, function (msg) {
-
-
-        if (msg.content) {
-          console.log(" [x] %s", msg.content.toString());
-        }
-
-
-      }, {
-        noAck: true
-      });
-    });
-  });
-});
 
