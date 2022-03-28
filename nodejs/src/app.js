@@ -18,6 +18,7 @@ var nodeHost = os.hostname;
 
 //generate node id
 var nodeId = Math.floor(Math.random() * (100 - 1 + 1) + 1);
+var currentTime = new Date().getTime;
 
 //connection string listing the mongo servers. This is an alternative to using a load balancer. THIS SHOULD BE DISCUSSED IN YOUR ASSIGNMENT.
 const connectionString = 'mongodb://localmongo1:27017,localmongo2:27017,localmongo3:27017/notFLIX_DB?replicaSet=rs0';
@@ -36,8 +37,8 @@ setInterval(function () {
       if (error1) {
         throw error1;
       }
-      var exchange = 'logs';
-      var msg = 'Hello World!';
+      var exchange = 'NODE ALIVE';
+      var msg = 'TODO: ADD NODE ID AND NAME OF NODES HOST';
 
       channel.assertExchange(exchange, 'fanout', {
         durable: false
