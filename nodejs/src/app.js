@@ -17,7 +17,7 @@ const connectionString = 'mongodb://localmongo1:27017,localmongo2:27017,localmon
 
 setInterval(function () {
 
-  amqp.connect('amqp://test:test@127.0.0.1', function (error0, connection) {
+  amqp.connect('amqp://test:test@cloud-assignment_haproxy_1', function (error0, connection) {
 
     //if connection failed throw error
     if (error0) {
