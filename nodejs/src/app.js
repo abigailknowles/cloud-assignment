@@ -18,7 +18,7 @@ const port = 3000
 const os = require('os');
 var nodeHost = os.hostname;
 
-//generate node id
+//generate node id and find current time in seconds
 var nodeId = Math.floor(Math.random() * (100 - 1 + 1) + 1);
 var currentTime = new Date().getTime / 1000;
 
@@ -44,6 +44,7 @@ setInterval(function () {
         throw error1;
       }
       var exchange = 'NODE ALIVE';
+      var currentTime = new Date().getTime / 1000;
       var msg = `{"nodeId": ${nodeId}, "hostname":${nodeHost}, "lastMessageReceived": ${currentTime}}`;
 
       channel.assertExchange(exchange, 'fanout', {
@@ -118,6 +119,7 @@ db.on('error', console.error.bind(console, 'MongoDB connection error:'));
 
 var Schema = mongoose.Schema;
 
+//setting up the database
 var analyticsSchema = new Schema({
   _id: Number,
   accountId: Number,
