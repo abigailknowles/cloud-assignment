@@ -24,6 +24,7 @@ var currentTime = new Date().getTime / 1000;
 var nodes = { nodeId: nodeId, hostname: nodeHost, lastMessageReceived: currentTime };
 var nodesList = [];
 nodesList.push(nodes);
+
 //connection string listing the mongo servers. This is an alternative to using a load balancer. THIS SHOULD BE DISCUSSED IN YOUR ASSIGNMENT.
 const connectionString = 'mongodb://localmongo1:27017,localmongo2:27017,localmongo3:27017/notFLIX_DB?replicaSet=rs0';
 
@@ -35,14 +36,13 @@ setInterval(function () {
     if (error0) {
       throw error0;
     }
-
     //create a channel if connected and send hello world to the logs Q
     connection.createChannel(function (error1, channel) {
       if (error1) {
         throw error1;
       }
       var exchange = 'NODE ALIVE';
-      var msg = 'TODO: ADD NODE ID AND NAME OF NODES HOST';
+      var msg = `{"nodeId": ${nodeId}, "hostname":${nodeHost}, "lastMessageReceived": ${currentTime}}`;
 
       channel.assertExchange(exchange, 'fanout', {
         durable: false
@@ -51,7 +51,6 @@ setInterval(function () {
       channel.publish(exchange, '', Buffer.from(msg));
       console.log(" [x] Sent %s", msg);
     });
-
 
     //in 1/2 a second force close the connection
     setTimeout(function () {
