@@ -1,5 +1,7 @@
 //Object data modelling library for mongo
 const mongoose = require('mongoose');
+
+//RabbitMQ
 var amqp = require('amqplib/callback_api');
 
 //Express web service library
@@ -29,7 +31,7 @@ nodesList.push(nodes);
 const connectionString = 'mongodb://localmongo1:27017,localmongo2:27017,localmongo3:27017/notFLIX_DB?replicaSet=rs0';
 
 setInterval(function () {
-
+  // connect to haproxy
   amqp.connect('amqp://test:test@cloud-assignment_haproxy_1', function (error0, connection) {
 
     //if connection failed throw error
@@ -65,7 +67,7 @@ setInterval(function () {
 app.listen(port, () => {
   console.log(`Express Application listening at port ` + port)
 })
-
+// connect to ha proxy
 amqp.connect('amqp://test:test@cloud-assignment_haproxy_1', function (error0, connection) {
   if (error0) {
     throw error0;
