@@ -20,6 +20,10 @@ var nodeHost = os.hostname;
 var nodeId = Math.floor(Math.random() * (100 - 1 + 1) + 1);
 var currentTime = new Date().getTime / 1000;
 
+//create a list of details about the nodes
+var nodes = { nodeId: nodeId, hostname: nodeHost, lastMessageReceived: currentTime };
+var nodesList = [];
+nodesList.push(nodes);
 //connection string listing the mongo servers. This is an alternative to using a load balancer. THIS SHOULD BE DISCUSSED IN YOUR ASSIGNMENT.
 const connectionString = 'mongodb://localmongo1:27017,localmongo2:27017,localmongo3:27017/notFLIX_DB?replicaSet=rs0';
 
