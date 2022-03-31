@@ -25,7 +25,7 @@ var nodeId = Math.floor(Math.random() * (100 - 1 + 1) + 1);
 var currentTime = new Date().getTime / 1000;
 
 //create a list of details about the nodes
-var nodes = { nodeId: nodeId, hostname: nodeHost, lastMessageReceived: currentTime };
+var nodes = { nodeId: nodeId, hostname: nodeHost, isNodeAlive: isNodeAlive, lastMessageReceived: currentTime };
 var nodesList = [];
 nodesList.push(nodes);
 
