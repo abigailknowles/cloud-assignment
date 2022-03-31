@@ -49,7 +49,7 @@ setInterval(function () {
       var currentTime = new Date().getTime / 1000;
       isNodeAlive = true;
 
-      var msg = `{"nodeId": ${nodeId}, "hostname":${nodeHost}, "isNodeAlive": ${isNodeAlive}, "lastMessageReceived": ${lastMessageReceived}}`;
+      var msg = `{"nodeId": ${nodeId}, "hostname":${nodeHost}, "isNodeAlive": ${isNodeAlive}, "lastMessageReceived": ${currentTime}}`;
 
       channel.assertExchange(exchange, 'fanout', {
         durable: false
@@ -79,7 +79,7 @@ amqp.connect('amqp://test:test@cloud-assignment_haproxy_1', function (error0, co
     if (error1) {
       throw error1;
     }
-    var exchange = 'logs';
+    var exchange = 'NODE ALIVE';
 
     channel.assertExchange(exchange, 'fanout', {
       durable: false
