@@ -14,11 +14,19 @@ const bodyParser = require('body-parser');
 const app = express()
 const port = 3000
 
+//connection string listing the mongo servers. This is an alternative to using a load balancer. THIS SHOULD BE DISCUSSED IN YOUR ASSIGNMENT.
+const connectionString = 'mongodb://localmongo1:27017,localmongo2:27017,localmongo3:27017/notFLIX_DB?replicaSet=rs0';
+
 //retrieve the hostname of a node
 const os = require('os');
 var nodeHost = os.hostname;
+
+// identify whether a node is alive or the leader
 var isNodeAlive = false;
 var isNodeTheLeader = false;
+
+var exchange;
+var msg;
 
 //generate node id and find current time in seconds
 var nodeId = Math.floor(Math.random() * (100 - 1 + 1) + 1);
@@ -28,9 +36,6 @@ var currentTime = new Date().getTime / 1000;
 var nodes = { nodeId: nodeId, hostname: nodeHost, isNodeAlive: isNodeAlive, lastMessageReceived: currentTime };
 var nodesList = [];
 nodesList.push(nodes);
-
-//connection string listing the mongo servers. This is an alternative to using a load balancer. THIS SHOULD BE DISCUSSED IN YOUR ASSIGNMENT.
-const connectionString = 'mongodb://localmongo1:27017,localmongo2:27017,localmongo3:27017/notFLIX_DB?replicaSet=rs0';
 
 setInterval(function () {
   // connect to haproxy
@@ -45,11 +50,11 @@ setInterval(function () {
       if (error1) {
         throw error1;
       }
-      var exchange = 'NODE ALIVE';
-      var currentTime = new Date().getTime / 1000;
+      exchange = 'NODE ALIVE';
+      currentTime = new Date().getTime / 1000;
       isNodeAlive = true;
 
-      var msg = `{"nodeId": ${nodeId}, "hostname":${nodeHost}, "isNodeAlive": ${isNodeAlive}, "lastMessageReceived": ${currentTime}}`;
+      msg = `{"nodeId": ${nodeId}, "hostname":${nodeHost}, "isNodeAlive": ${isNodeAlive}, "lastMessageReceived": ${currentTime}}`;
 
       channel.assertExchange(exchange, 'fanout', {
         durable: false
