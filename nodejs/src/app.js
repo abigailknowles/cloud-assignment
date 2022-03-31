@@ -84,7 +84,7 @@ amqp.connect('amqp://test:test@cloud-assignment_haproxy_1', function (error0, co
     if (error1) {
       throw error1;
     }
-    var exchange = 'NODE ALIVE';
+    exchange = 'NODE ALIVE';
 
     channel.assertExchange(exchange, 'fanout', {
       durable: false
@@ -104,6 +104,8 @@ amqp.connect('amqp://test:test@cloud-assignment_haproxy_1', function (error0, co
 
         if (msg.content) {
           console.log(" [x] %s", msg.content.toString());
+          //TODO: identify current node in here
+          //TODO: check if node exists in a list, if not create it
         }
 
 
