@@ -17,6 +17,8 @@ const port = 3000
 //retrieve the hostname of a node
 const os = require('os');
 var nodeHost = os.hostname;
+var isNodeAlive = false;
+var isNodeTheLeader = false;
 
 //generate node id and find current time in seconds
 var nodeId = Math.floor(Math.random() * (100 - 1 + 1) + 1);
@@ -45,16 +47,16 @@ setInterval(function () {
       }
       var exchange = 'NODE ALIVE';
       var currentTime = new Date().getTime / 1000;
-      var msg = `{"nodeId": ${nodeId}, "hostname":${nodeHost}, "lastMessageReceived": ${currentTime}}`;
+      isNodeAlive = true;
+
+      var msg = `{"nodeId": ${nodeId}, "hostname":${nodeHost}, "isNodeAlive": ${isNodeAlive}, "lastMessageReceived": ${lastMessageReceived}}`;
 
       channel.assertExchange(exchange, 'fanout', {
         durable: false
       });
-
       channel.publish(exchange, '', Buffer.from(msg));
       console.log(" [x] Sent %s", msg);
     });
-
     //in 1/2 a second force close the connection
     setTimeout(function () {
       connection.close();
