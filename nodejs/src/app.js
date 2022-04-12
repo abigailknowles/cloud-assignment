@@ -54,22 +54,21 @@ setInterval(function () {
       seconds = new Date().getTime() / 1000;
       isNodeAlive = true;
 
-      msg = `----------------------------------------------------------------------------------------------------------------------\n\r`;
-      msg += `Node ID: ${nodeId}, hostname: ${nodeHost} ${isNodeAlive ? "is alive" : "is dead"} last seen ${seconds} seconds ago\n\r`;
-      msg += `----------------------------------------------------------------------------------------------------------------------\n\r`;
+      msg = `\n\r\n\r----------------------------------------------------------------------------------------------------------------------\n\r\n\r`;
+      msg += `Node ID: ${nodeId}, hostname: ${nodeHost} ${isNodeAlive ? "is alive" : "is dead"} last seen ${seconds} seconds ago\n\r\n\r`;
+      msg += `----------------------------------------------------------------------------------------------------------------------\n\r\n\r`;
 
       channel.assertExchange(exchange, 'fanout', {
         durable: false
       });
       channel.publish(exchange, '', Buffer.from(msg));
-      console.log(" [x] Sent %s", msg);
+      console.log("[x] Sent %s", msg);
     });
     //in 1/2 a second force close the connection
     setTimeout(function () {
       connection.close();
     }, 500);
   });
-
 }, 3000);
 
 
