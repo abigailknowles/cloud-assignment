@@ -54,7 +54,9 @@ setInterval(function () {
       seconds = new Date().getTime() / 1000;
       isNodeAlive = true;
 
-      msg = `Node ID: ${nodeId}, hostname: ${nodeHost} ${isNodeAlive ? "is alive" : "is dead"} last seen ${seconds} seconds ago`;
+      msg = `----------------------------------------------------------------------------------------------------------------------\n\r`;
+      msg += `Node ID: ${nodeId}, hostname: ${nodeHost} ${isNodeAlive ? "is alive" : "is dead"} last seen ${seconds} seconds ago\n\r`;
+      msg += `----------------------------------------------------------------------------------------------------------------------\n\r`;
 
       channel.assertExchange(exchange, 'fanout', {
         durable: false
