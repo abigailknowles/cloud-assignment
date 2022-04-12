@@ -33,9 +33,9 @@ var nodeId = Math.floor(Math.random() * (100 - 1 + 1) + 1);
 var seconds = new Date().getTime() / 1000;
 
 //create a list of details about the nodes
-var nodes = { nodeId: nodeId, hostname: nodeHost, isNodeAlive: isNodeAlive, lastMessageReceived: seconds };
-var nodesList = [];
-nodesList.push(nodes);
+var nodes = { nodeId: nodeId, hostname: nodeHost, isNodeAlive: isNodeAlive, lastSeenAlive: seconds };
+var messageList = [];
+messageList.push(nodes);
 
 setInterval(function () {
   // connect to haproxy
@@ -55,7 +55,7 @@ setInterval(function () {
       isNodeAlive = true;
 
       msg = `\n\r----------------------------------------------------------------------------------------------------------------------\n\r\n\r`;
-      msg += `Node ID: ${nodeId}, hostname: ${nodeHost} ${isNodeAlive ? "is alive" : "is dead"} last seen ${seconds} seconds ago\n\r\n\r`;
+      msg += `{Node ID: ${nodeId}, hostname: ${nodeHost} ${isNodeAlive ? "is alive" : "is dead"} last seen ${seconds} seconds ago}\n\r\n\r`;
       msg += `----------------------------------------------------------------------------------------------------------------------\n\r`;
 
       channel.assertExchange(exchange, 'fanout', {
@@ -105,8 +105,20 @@ amqp.connect('amqp://test:test@cloud-assignment_haproxy_1', function (error0, co
 
         if (msg.content) {
           console.log(" [x] %s", msg.content.toString());
-          //TODO: identify current node in here
-          //TODO: check if node exists in a list, if not create it
+          messageQueueStarted = true;
+
+          var messsageContent = JSON.parse(msg.content.toString());
+          var newTime = new Date().getTime() / 1000;
+
+          if (messageList.some(message => message.hostName === messsageContent.hostName) === false) {
+            messageList.push(messageContent);
+          } else {
+            messageList.forEach((message) => {
+              if (message.hostName === messageContent.hostName) {
+                message.lastSeenAlive = newTime;
+              }
+            });
+          }
         }
 
 
