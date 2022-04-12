@@ -30,7 +30,7 @@ var msg;
 
 //generate node id and find current time in seconds
 var nodeId = Math.floor(Math.random() * (100 - 1 + 1) + 1);
-var currentTime = new Date().getTime() / 1000;
+var seconds = new Date().getTime() / 1000;
 
 //create a list of details about the nodes
 var nodes = { nodeId: nodeId, hostname: nodeHost, isNodeAlive: isNodeAlive, lastMessageReceived: currentTime };
@@ -51,10 +51,10 @@ setInterval(function () {
         throw error1;
       }
       exchange = 'NODE ALIVE';
-      currentTime = new Date().getTime() / 1000;
+      seconds = new Date().getTime() / 1000;
       isNodeAlive = true;
 
-      msg = `{"nodeId": ${nodeId}, "hostname":${nodeHost}, "isNodeAlive": ${isNodeAlive}, "lastMessageReceived": ${currentTime}}`;
+      msg = `Node ID: ${nodeId}, hostname: ${nodeHost} ${isNodeAlive ? "is alive" : "is dead"} last seen ${seconds} seconds ago`;
 
       channel.assertExchange(exchange, 'fanout', {
         durable: false
