@@ -19,7 +19,7 @@ const connectionString = 'mongodb://localmongo1:27017,localmongo2:27017,localmon
 
 //retrieve the hostname of a node
 const os = require('os');
-var nodeHost = os.hostName;
+var nodeHost = os.hostname;
 
 // identify whether a node is alive or the leader
 var isNodeAlive = false;
@@ -33,7 +33,7 @@ var nodeId = Math.floor(Math.random() * (100 - 1 + 1) + 1);
 var seconds = new Date().getTime() / 1000;
 
 //create a list of details about the nodes
-var nodes = { nodeId: nodeId, hostName: nodeHost, isNodeAlive: isNodeAlive, lastSeenAlive: seconds };
+var nodes = { nodeId: nodeId, hostname: nodeHost, isNodeAlive: isNodeAlive, lastSeenAlive: seconds };
 var messageList = [];
 messageList.push(nodes);
 
@@ -55,7 +55,7 @@ setInterval(function () {
       isNodeAlive = true;
 
       msg = `\n\r----------------------------------------------------------------------------------------------------------------------\n\r\n\r`;
-      msg += `{Node ID: ${nodeId}, hostName: ${nodeHost} ${isNodeAlive ? "is alive" : "is dead"} last seen ${seconds} seconds ago}\n\r\n\r`;
+      msg += `{Node ID: ${nodeId}, hostname: ${nodeHost} ${isNodeAlive ? "is alive" : "is dead"} last seen ${seconds} seconds ago}\n\r\n\r`;
       msg += `----------------------------------------------------------------------------------------------------------------------\n\r`;
 
       channel.assertExchange(exchange, 'fanout', {
@@ -112,11 +112,11 @@ amqp.connect('amqp://test:test@cloud-assignment_haproxy_1', function (error0, co
           var messsageContent = JSON.parse(msg.content.toString());
           var newTime = new Date().getTime() / 1000;
 
-          if (messageList.some(message => message.hostName === messsageContent.hostName) === false) {
+          if (messageList.some(message => message.hostname === messsageContent.hostname) === false) {
             messageList.push(messageContent);
           } else {
             messageList.forEach((message) => {
-              if (message.hostName === messageContent.hostName) {
+              if (message.hostname === messageContent.hostname) {
                 message.lastSeenAlive = newTime;
               }
             });
@@ -149,7 +149,7 @@ setInterval(function () {
       seconds = new Date().getTime() / 1000;
       isNodeAlive = true;
 
-      msg = `{"id": ${nodeId}, "hostName": ${hostName}, "isAlive": ${isAlive} "lastSeenAlive": ${seconds}}`;
+      msg = `{"id": ${nodeId}, "hostname": ${hostname}, "isAlive": ${isAlive} "lastSeenAlive": ${seconds}}`;
       msg = JSON.stringify(JSON.parse(msg));
 
       channel.assertExchange(exchange, 'fanout', {

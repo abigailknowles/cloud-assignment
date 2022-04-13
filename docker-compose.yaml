@@ -1,7 +1,7 @@
 version: "3"
 services:
   mongo1:
-    hostName: mongo1
+    hostname: mongo1
     container_name: localmongo1
     image: mongo:4.0-xenial
     ports:
@@ -11,7 +11,7 @@ services:
     restart: always
     entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "rs0" ]
   mongo2:
-    hostName: mongo2
+    hostname: mongo2
     container_name: localmongo2
     image: mongo:4.0-xenial
     ports:
@@ -19,7 +19,7 @@ services:
     restart: always
     entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "rs0" ]
   mongo3:
-    hostName: mongo3
+    hostname: mongo3
     container_name: localmongo3
     image: mongo:4.0-xenial
     ports:
@@ -39,17 +39,17 @@ services:
 
 
   node1:
-    hostName: node1
+    hostname: node1
     build: ./nodejs
     ports:
       - "81:3000"
   node2:  
-    hostName: node2
+    hostname: node2
     build: ./nodejs
     ports:
       - "82:3000"
   node3:
-    hostName: node3
+    hostname: node3
     build: ./nodejs
     ports:
       - "83:3000"
