@@ -22,8 +22,8 @@ const os = require('os');
 var hostname = os.hostname;
 
 // identify whether a node is alive or the leader
-var isNodeAlive = false;
-var isNodeTheLeader = false;
+var isAlive = false;
+var isLeader = false;
 
 var exchange;
 var msg;
@@ -33,7 +33,7 @@ var nodeId = Math.floor(Math.random() * (100 - 1 + 1) + 1);
 var seconds = new Date().getTime() / 1000;
 
 //create a list of details about the nodes
-var nodes = { nodeId: nodeId, hostname: hostname, isNodeAlive: isNodeAlive, lastSeenAlive: seconds };
+var nodes = { nodeId: nodeId, hostname: hostname, isAlive: isAlive, lastSeenAlive: seconds };
 var messageList = [];
 messageList.push(nodes);
 
@@ -52,10 +52,10 @@ setInterval(function () {
       }
       exchange = 'NODE ALIVE';
       seconds = new Date().getTime() / 1000;
-      isNodeAlive = true;
+      isAlive = true;
 
       msg = `\n\r----------------------------------------------------------------------------------------------------------------------\n\r\n\r`;
-      msg += `{Node ID: ${nodeId}, hostname: ${hostname} ${isNodeAlive ? "is alive" : "is dead"} last seen ${seconds} seconds ago}\n\r\n\r`;
+      msg += `{Node ID: ${nodeId}, hostname: ${hostname} ${isAlive ? "is alive" : "is dead"} last seen ${seconds} seconds ago}\n\r\n\r`;
       msg += `----------------------------------------------------------------------------------------------------------------------\n\r`;
 
       channel.assertExchange(exchange, 'fanout', {
@@ -147,7 +147,7 @@ setInterval(function () {
 
       exchange = 'NODE ALIVE';
       seconds = new Date().getTime() / 1000;
-      isNodeAlive = true;
+      isAlive = true;
 
       msg = `{"id": ${nodeId}, "hostname": ${hostname}, "isAlive": ${isAlive} "lastSeenAlive": ${seconds}}`;
       msg = JSON.stringify(JSON.parse(msg));
