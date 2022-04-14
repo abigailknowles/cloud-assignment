@@ -27,6 +27,7 @@ var isLeader = false;
 
 var exchange;
 var msg;
+var messageQueueStarted = false;
 
 //generate node id and find current time in seconds
 var nodeId = Math.floor(Math.random() * (100 - 1 + 1) + 1);
@@ -75,66 +76,66 @@ setInterval(function () {
   });
 }, 3000);
 
+//subscriber
+// connect to ha proxy
+
+amqp.connect('amqp://test:test@cloud-assignment_haproxy_1', function (error0, connection) {
+  if (error0) {
+    throw error0;
+  }
+  connection.createChannel(function (error1, channel) {
+    if (error1) {
+      throw error1;
+    }
+    exchange = 'nodes';
+
+    channel.assertExchange(exchange, 'fanout', {
+      durable: false
+    });
+
+    channel.assertQueue('', {
+      exclusive: true
+    }, function (error2, q) {
+      if (error2) {
+        throw error2;
+      }
+      console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", q.queue);
+      channel.bindQueue(q.queue, exchange, '');
+
+      console.log("channel.consume(q.queue, function (msg)")
+      channel.consume(q.queue, function (msg) {
+        console.log("MESSAGE", msg)
+        console.log("MESSAGE CONTENT", msg.content)
+
+        if (msg.content) {
+          console.log("Received [x] %s", msg.content.toString());
+          messageQueueStarted = true;
+
+          var messsageContent = JSON.parse(msg.content.toString());
+          var newTime = new Date().getTime() / 1000;
+
+          if (messageList.some(message => message.hostname === messsageContent.hostname) === false) {
+            messageList.push(messageContent);
+          } else {
+            messageList.forEach((message) => {
+              if (message.hostname === messageContent.hostname) {
+                message.lastSeenAlive = newTime;
+              }
+            });
+          }
+        }
+      }, {
+        noAck: true
+      });
+    });
+  });
+});
 
 
 //bind the express web service to the port specified
 app.listen(port, () => {
   console.log(`Express Application listening at port ` + port)
 })
-
-//subscriber
-// connect to ha proxy
-setInterval(function () {
-  amqp.connect('amqp://test:test@cloud-assignment_haproxy_1', function (error0, connection) {
-    if (error0) {
-      throw error0;
-    }
-    connection.createChannel(function (error1, channel) {
-      if (error1) {
-        throw error1;
-      }
-      exchange = 'nodes';
-
-      channel.assertExchange(exchange, 'fanout', {
-        durable: false
-      });
-
-      channel.assertQueue('', {
-        exclusive: true
-      }, function (error2, q) {
-        if (error2) {
-          throw error2;
-        }
-        console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", q.queue);
-        channel.bindQueue(q.queue, exchange, '');
-
-        channel.consume(q.queue, function (msg) {
-
-
-          if (msg.content) {
-            console.log("Received [x] %s", msg.content.toString());
-            messageQueueStarted = true;
-
-            var messsageContent = JSON.parse(msg.content.toString());
-            var newTime = new Date().getTime() / 1000;
-
-            if (messageList.some(message => message.hostname === messsageContent.hostname) === false) {
-              messageList.push(messageContent);
-            } else {
-              messageList.forEach((message) => {
-                if (message.hostname === messageContent.hostname) {
-                  message.lastSeenAlive = newTime;
-                }
-              });
-            }
-          }
-        }, {
-          noAck: true
-        });
-      });
-    });
-  });
-}, 5000)
 
 //tell express to use the body parser. Note - This function was built into express but then moved to a seperate package.
 app.use(bodyParser.json());
