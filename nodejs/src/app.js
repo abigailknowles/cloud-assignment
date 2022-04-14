@@ -41,7 +41,7 @@ messageList.push(nodes);
 //publisher
 setInterval(function () {
   // connect to haproxy
-  amqp.connect('amqp://test:test@cloud-assignment_haproxy_1', function (error0, connection) {
+  amqp.connect('amqp://user:bitnami@cloud-assignment_haproxy_1', function (error0, connection) {
 
     //if connection failed throw error
     if (error0) {
@@ -59,10 +59,6 @@ setInterval(function () {
 
       msg = `{"id": "${nodeId}", "hostname": "${hostname}", "isAlive": "${isAlive}", "lastSeenAlive": "${seconds}" }`;
 
-      console.log(msg)
-
-      msg = JSON.stringify(JSON.parse(msg));
-
       channel.assertExchange(exchange, 'fanout', {
         durable: false
       });
@@ -79,7 +75,7 @@ setInterval(function () {
 //subscriber
 // connect to ha proxy
 
-amqp.connect('amqp://test:test@cloud-assignment_haproxy_1', function (error0, connection) {
+amqp.connect('amqp://user:bitnami@cloud-assignment_haproxy_1', function (error0, connection) {
   if (error0) {
     throw error0;
   }
@@ -102,24 +98,21 @@ amqp.connect('amqp://test:test@cloud-assignment_haproxy_1', function (error0, co
       console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", q.queue);
       channel.bindQueue(q.queue, exchange, '');
 
-      console.log("channel.consume(q.queue, function (msg)")
       channel.consume(q.queue, function (msg) {
-        console.log("MESSAGE", msg)
-        console.log("MESSAGE CONTENT", msg.content)
 
         if (msg.content) {
           console.log("Received [x] %s", msg.content.toString());
           messageQueueStarted = true;
 
-          var messsageContent = JSON.parse(msg.content.toString());
+          var messageContent = JSON.parse(msg.content.toString());
           var newTime = new Date().getTime() / 1000;
 
-          if (messageList.some(message => message.hostname === messsageContent.hostname) === false) {
+          if (messageList.some(message => message.hostname === messageContent.hostname) === false) {
             messageList.push(messageContent);
           } else {
             messageList.forEach((message) => {
               if (message.hostname === messageContent.hostname) {
-                message.lastSeenAlive = newTime;
+                message.lastSeenAlive = "BOB";
               }
             });
           }

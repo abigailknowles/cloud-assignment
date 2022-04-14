@@ -72,6 +72,7 @@ services:
       - RABBITMQ_NODE_TYPE=stats
       - RABBITMQ_NODE_NAME=rabbitmq@rabbitmq-stats
       - RABBITMQ_ERL_COOKIE=password
+      - RABBITMQ_DISK_FREE_ABSOLUTE_LIMIT=500MB
     ports:
       - "50001:15672"
 
@@ -87,6 +88,7 @@ services:
       - RABBITMQ_NODE_NAME=rabbitmq@rabbitmq-queue-one
       - RABBITMQ_CLUSTER_NODE_NAME=rabbitmq@rabbitmq-stats
       - RABBITMQ_ERL_COOKIE=password
+      - RABBITMQ_DISK_FREE_ABSOLUTE_LIMIT=500MB
  
   rabbitmq-queue-two:
     image: bitnami/rabbitmq:3.8.14
@@ -100,6 +102,7 @@ services:
       - RABBITMQ_NODE_NAME=rabbitmq@rabbitmq-queue-two
       - RABBITMQ_CLUSTER_NODE_NAME=rabbitmq@rabbitmq-stats
       - RABBITMQ_ERL_COOKIE=password
+      - RABBITMQ_DISK_FREE_ABSOLUTE_LIMIT=500MB
 
   haproxy: 
     image: haproxy:1.7 
