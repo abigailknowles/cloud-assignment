@@ -52,11 +52,14 @@ setInterval(function () {
         throw error1;
       }
 
-      exchange = 'NODE ALIVE';
+      exchange = 'nodes';
       seconds = new Date().getTime() / 1000;
       isAlive = true;
 
-      msg = `{"id": ${nodeId}, "hostname": ${hostname}, "isAlive": ${isAlive}, "lastSeenAlive": ${seconds}}`;
+      msg = `{"id": "${nodeId}", "hostname": "${hostname}", "isAlive": "${isAlive}", "lastSeenAlive": "${seconds}" }`;
+
+      console.log(msg)
+
       msg = JSON.stringify(JSON.parse(msg));
 
       channel.assertExchange(exchange, 'fanout', {
@@ -81,55 +84,57 @@ app.listen(port, () => {
 
 //subscriber
 // connect to ha proxy
-amqp.connect('amqp://test:test@cloud-assignment_haproxy_1', function (error0, connection) {
-  if (error0) {
-    throw error0;
-  }
-  connection.createChannel(function (error1, channel) {
-    if (error1) {
-      throw error1;
+setInterval(function () {
+  amqp.connect('amqp://test:test@cloud-assignment_haproxy_1', function (error0, connection) {
+    if (error0) {
+      throw error0;
     }
-    exchange = 'NODE ALIVE';
-
-    channel.assertExchange(exchange, 'fanout', {
-      durable: false
-    });
-
-    channel.assertQueue('', {
-      exclusive: true
-    }, function (error2, q) {
-      if (error2) {
-        throw error2;
+    connection.createChannel(function (error1, channel) {
+      if (error1) {
+        throw error1;
       }
-      console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", q.queue);
-      channel.bindQueue(q.queue, exchange, '');
+      exchange = 'nodes';
 
-      channel.consume(q.queue, function (msg) {
+      channel.assertExchange(exchange, 'fanout', {
+        durable: false
+      });
 
-
-        if (msg.content) {
-          console.log(" [x] %s", msg.content.toString());
-          messageQueueStarted = true;
-
-          var messsageContent = JSON.parse(msg.content.toString());
-          var newTime = new Date().getTime() / 1000;
-
-          if (messageList.some(message => message.hostname === messsageContent.hostname) === false) {
-            messageList.push(messageContent);
-          } else {
-            messageList.forEach((message) => {
-              if (message.hostname === messageContent.hostname) {
-                message.lastSeenAlive = newTime;
-              }
-            });
-          }
+      channel.assertQueue('', {
+        exclusive: true
+      }, function (error2, q) {
+        if (error2) {
+          throw error2;
         }
-      }, {
-        noAck: true
+        console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", q.queue);
+        channel.bindQueue(q.queue, exchange, '');
+
+        channel.consume(q.queue, function (msg) {
+
+
+          if (msg.content) {
+            console.log("Received [x] %s", msg.content.toString());
+            messageQueueStarted = true;
+
+            var messsageContent = JSON.parse(msg.content.toString());
+            var newTime = new Date().getTime() / 1000;
+
+            if (messageList.some(message => message.hostname === messsageContent.hostname) === false) {
+              messageList.push(messageContent);
+            } else {
+              messageList.forEach((message) => {
+                if (message.hostname === messageContent.hostname) {
+                  message.lastSeenAlive = newTime;
+                }
+              });
+            }
+          }
+        }, {
+          noAck: true
+        });
       });
     });
   });
-});
+}, 5000)
 
 //tell express to use the body parser. Note - This function was built into express but then moved to a seperate package.
 app.use(bodyParser.json());
