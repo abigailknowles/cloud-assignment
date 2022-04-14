@@ -19,7 +19,7 @@ const connectionString = 'mongodb://localmongo1:27017,localmongo2:27017,localmon
 
 //retrieve the hostname of a node
 const os = require('os');
-var nodeHost = os.hostname;
+var hostname = os.hostname;
 
 // identify whether a node is alive or the leader
 var isNodeAlive = false;
@@ -33,7 +33,7 @@ var nodeId = Math.floor(Math.random() * (100 - 1 + 1) + 1);
 var seconds = new Date().getTime() / 1000;
 
 //create a list of details about the nodes
-var nodes = { nodeId: nodeId, hostname: nodeHost, isNodeAlive: isNodeAlive, lastSeenAlive: seconds };
+var nodes = { nodeId: nodeId, hostname: hostname, isNodeAlive: isNodeAlive, lastSeenAlive: seconds };
 var messageList = [];
 messageList.push(nodes);
 
@@ -55,7 +55,7 @@ setInterval(function () {
       isNodeAlive = true;
 
       msg = `\n\r----------------------------------------------------------------------------------------------------------------------\n\r\n\r`;
-      msg += `{Node ID: ${nodeId}, hostname: ${nodeHost} ${isNodeAlive ? "is alive" : "is dead"} last seen ${seconds} seconds ago}\n\r\n\r`;
+      msg += `{Node ID: ${nodeId}, hostname: ${hostname} ${isNodeAlive ? "is alive" : "is dead"} last seen ${seconds} seconds ago}\n\r\n\r`;
       msg += `----------------------------------------------------------------------------------------------------------------------\n\r`;
 
       channel.assertExchange(exchange, 'fanout', {
