@@ -31,7 +31,7 @@ var messageQueueStarted = false;
 
 //generate node id and find current time in seconds
 var nodeId = Math.floor(Math.random() * (100 - 1 + 1) + 1);
-var seconds = new Date().getTime() / 1000;
+var seconds = getTimeInSeconds();
 
 //create a list of details about the nodes
 var nodes = { id: nodeId, hostname: hostname, isAlive: isAlive, lastSeenAlive: seconds };
@@ -54,7 +54,7 @@ setInterval(function () {
       }
 
       exchange = 'nodes';
-      seconds = new Date().getTime() / 1000;
+      seconds = getTimeInSeconds();
       isAlive = true;
 
       msg = `{"id": ${nodeId}, "hostname": "${hostname}", "isAlive": "${isAlive}", "lastSeenAlive": "${seconds}" }`;
@@ -105,7 +105,7 @@ amqp.connect('amqp://user:bitnami@cloud-assignment_haproxy_1', function (error0,
           messageQueueStarted = true;
 
           var messageContent = JSON.parse(msg.content.toString());
-          var newTime = new Date().getTime() / 1000;
+          var newTime = getTimeInSeconds();
 
           if (messageList.some(message => message.hostname === messageContent.hostname) === false) {
             messageList.push(messageContent);
@@ -138,6 +138,24 @@ setInterval(function () {
 
   }
 }, 3000);
+
+setInterval(function () {
+  if (isLeader) {
+    messageList.forEach(message => {
+      if (Math.round(seconds - message.lastSeenAlive) > 10) {
+        message.isAlive = false;
+        console.log("I am DEAD: ", message.id);
+      } else {
+        message.isAlive = true;
+      }
+    });
+    console.log("checked for dead message");
+  }
+}, 25000);
+
+function getTimeInSeconds() {
+  return Math.round(new Date().getTime() / 1000, 2);
+}
 
 //bind the express web service to the port specified
 app.listen(port, () => {
