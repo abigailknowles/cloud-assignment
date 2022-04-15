@@ -40,6 +40,7 @@ services:
 
   node1:
     hostname: node1
+    container_name: nodeContainer1
     build: ./nodejs
     ports:
       - "81:3000"
@@ -48,6 +49,7 @@ services:
     entrypoint:  [ "/bin/sh", "-c", "pm2-runtime app.js --watch"]
   node2:  
     hostname: node2
+    container_name: nodeContainer2
     build: ./nodejs
     ports:
       - "82:3000"
@@ -56,6 +58,7 @@ services:
     entrypoint:  [ "/bin/sh", "-c", "pm2-runtime app.js --watch"]
   node3:
     hostname: node3
+    container_name: nodeContainer3
     build: ./nodejs
     ports:
       - "83:3000"

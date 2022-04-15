@@ -7,7 +7,7 @@ var amqp = require('amqplib/callback_api');
 //Express web service library
 const express = require('express')
 
-const axios = require("axios");
+const axios = require('axios');
 
 //used to parse the server response from json to object.
 const bodyParser = require('body-parser');
