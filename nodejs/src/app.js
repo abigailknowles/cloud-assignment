@@ -161,11 +161,11 @@ function getTimeInSeconds() {
 
 async function createContainer() {
   var containerDetails = {
-    Image: "NotFLIX_node_image",
+    Image: "cloud-assignment_image",
     Hostname: `node_${messageList.length + 1}`,
     NetworkConfig: {
       EndpointsConfig: {
-        "NotFLIX_nodejs": {},
+        "cloud-assignment_nodejs": {},
       },
     },
   };
