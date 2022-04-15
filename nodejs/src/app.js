@@ -22,7 +22,7 @@ const connectionString = 'mongodb://localmongo1:27017,localmongo2:27017,localmon
 //retrieve the hostname of a node
 const os = require('os');
 var hostname = os.hostname;
-var containerName = os.containerName;
+var containerName = os.container_name;
 // identify whether a node is alive or the leader
 var isAlive = false;
 var isLeader = false;
