@@ -121,7 +121,23 @@ amqp.connect('amqp://user:bitnami@cloud-assignment_haproxy_1', function (error0,
   });
 });
 
+// every 3 seconds check for a new leader and select one based on the highest id value
+setInterval(function () {
+  if (messageQueueStarted) {
+    var currentHighestNodeId = 0;
+    messageList.forEach(message => {
+      //for consistency across all nodes we need to find the current highest node id value
+      if (message.hostname !== hostname && message.id > currentHighestNodeId) {
+        currentHighestNodeId = message.id;
+      }
+    });
 
+    //if this node has the highest id value set it to be the new leader
+    if (nodeId >= currentHighestNodeId)
+      isLeader = true;
+
+  }
+}, 3000);
 
 //bind the express web service to the port specified
 app.listen(port, () => {
