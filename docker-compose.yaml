@@ -41,8 +41,6 @@ services:
       - ./scripts:/scripts
     restart: "no"
     entrypoint: [ "bash", "/scripts/mongo_setup.sh"]
-
-
   node1:
     hostname: node1
     container_name: nodeContainer1
@@ -77,6 +75,7 @@ services:
       - ./nodejs/src:/usr/src/app/
     entrypoint:  [ "/bin/sh", "-c", "pm2-runtime app.js --watch"]
   nginx:
+    container_name: "nginx"
     build: ./nginx
     ports:
       - "80:80"
