@@ -170,8 +170,8 @@ async function createContainer() {
     },
   };
   try {
-    await axios.post(`http://host.docker.internal:2375/containers/create?name=${hostname}`, containerDetails).then(function (response) { console.log(response) });
-    await axios.post(`http://host.docker.internal:2375/containers/${hostname}/start`);
+    await axios.post(`http://host.docker.internal:2375/containers/create?name=containerName_${messageList.length + 1}`, containerDetails).then(function (response) { console.log(response) });
+    await axios.post(`http://host.docker.internal:2375/containers/containerName_${messageList.length + 1}/start`);
   }
   catch (error) {
     console.log(error);
