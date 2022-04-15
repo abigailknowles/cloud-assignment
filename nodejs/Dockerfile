@@ -7,6 +7,6 @@ RUN ls -la /usr/src/app/*
 RUN npm install express mongoose
 RUN npm install pm2 -g
 RUN npm install express mongoose amqplib
-CMD [ "pm2-runtime", "app.js" ]
+CMD [ "pm2-runtime", "app.js", "--watch"  ]
 
     
