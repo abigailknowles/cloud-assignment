@@ -7,6 +7,8 @@ var amqp = require('amqplib/callback_api');
 //Express web service library
 const express = require('express')
 
+const axios = require("axios");
+
 //used to parse the server response from json to object.
 const bodyParser = require('body-parser');
 
@@ -20,7 +22,7 @@ const connectionString = 'mongodb://localmongo1:27017,localmongo2:27017,localmon
 //retrieve the hostname of a node
 const os = require('os');
 var hostname = os.hostname;
-
+var containerName = os.containerName;
 // identify whether a node is alive or the leader
 var isAlive = false;
 var isLeader = false;
@@ -31,7 +33,7 @@ var messageQueueStarted = false;
 
 //generate node id and find current time in seconds
 var nodeId = Math.floor(Math.random() * (100 - 1 + 1) + 1);
-var seconds = new Date().getTime() / 1000;
+var seconds = getTimeInSeconds();
 
 //create a list of details about the nodes
 var nodes = { id: nodeId, hostname: hostname, isAlive: isAlive, lastSeenAlive: seconds };
@@ -54,7 +56,7 @@ setInterval(function () {
       }
 
       exchange = 'nodes';
-      seconds = new Date().getTime() / 1000;
+      seconds = getTimeInSeconds();
       isAlive = true;
 
       msg = `{"id": ${nodeId}, "hostname": "${hostname}", "isAlive": "${isAlive}", "lastSeenAlive": "${seconds}" }`;
@@ -105,7 +107,7 @@ amqp.connect('amqp://user:bitnami@cloud-assignment_haproxy_1', function (error0,
           messageQueueStarted = true;
 
           var messageContent = JSON.parse(msg.content.toString());
-          var newTime = new Date().getTime() / 1000;
+          var newTime = getTimeInSeconds();
 
           if (messageList.some(message => message.hostname === messageContent.hostname) === false) {
             messageList.push(messageContent);
@@ -121,7 +123,61 @@ amqp.connect('amqp://user:bitnami@cloud-assignment_haproxy_1', function (error0,
   });
 });
 
+// every 3 seconds check for a new leader and select one based on the highest id value
+setInterval(function () {
+  if (messageQueueStarted) {
+    var currentHighestNodeId = 0;
+    messageList.forEach(message => {
+      //for consistency across all nodes we need to find the current highest node id value
+      if (message.hostname !== hostname && message.id > currentHighestNodeId) {
+        currentHighestNodeId = message.id;
+      }
+    });
 
+    //if this node has the highest id value set it to be the new leader
+    if (nodeId >= currentHighestNodeId)
+      isLeader = true;
+
+  }
+}, 3000);
+
+setInterval(function () {
+  if (isLeader) {
+    messageList.forEach(message => {
+      if (Math.round(seconds - message.lastSeenAlive) > 10) {
+        message.isAlive = false;
+        console.log("I am DEAD: ", message.id);
+        createContainer();
+      } else {
+        message.isAlive = true;
+      }
+    });
+    console.log("checked for dead message");
+  }
+}, 25000);
+
+function getTimeInSeconds() {
+  return Math.round(new Date().getTime() / 1000, 2);
+}
+
+async function createContainer() {
+  var containerDetails = {
+    Image: "NotFLIX_node_image",
+    Hostname: `node_${messageList.length + 1}`,
+    NetworkConfig: {
+      EndpointsConfig: {
+        "NotFLIX_nodejs": {},
+      },
+    },
+  };
+  try {
+    await axios.post(`http://host.docker.internal:2375/containers/create?name=${containerName}`, containerDetails).then(function (response) { console.log(response) });
+    await axios.post(`http://host.docker.internal:2375/containers/${containerName}/start`);
+  }
+  catch (error) {
+    console.log(error);
+  }
+}
 
 //bind the express web service to the port specified
 app.listen(port, () => {
