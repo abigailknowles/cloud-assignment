@@ -2,28 +2,33 @@ version: "3"
 services:
   mongo1:
     hostname: mongo1
-    container_name: localmongo1
+    container_name: containerMongo1
     image: mongo:4.0-xenial
     ports:
       - "40001:27017"
       - "27017:27017"
-      
+    networks:
+      - nodejs
     restart: always
     entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "rs0" ]
   mongo2:
     hostname: mongo2
-    container_name: localmongo2
+    container_name: containerMongo2
     image: mongo:4.0-xenial
     ports:
       - "40002:27017"
+    networks:
+      - nodejs
     restart: always
     entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "rs0" ]
   mongo3:
     hostname: mongo3
-    container_name: localmongo3
+    container_name: containerMongo3
     image: mongo:4.0-xenial
     ports:
       - "40003:27017"
+    networks:
+      - nodejs
     restart: always
     entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "rs0" ]
   mongosetup:
@@ -81,7 +86,7 @@ services:
      - node3
     networks:
       - nodejs
-      
+
       # Message tier
   rabbitmq-stats:
     image: bitnami/rabbitmq:3.8.14
@@ -95,12 +100,16 @@ services:
       - RABBITMQ_DISK_FREE_ABSOLUTE_LIMIT=500MB
     ports:
       - "50001:15672"
+    networks:
+      - nodejs 
 
   rabbitmq-queue-one:
     image: bitnami/rabbitmq:3.8.14
     container_name: rabbitmq-queue-one
     depends_on:
       - rabbitmq-stats
+    networks:
+      - nodejs 
     volumes:
       - rabbitmq-queue-one-data:/bitnami
     environment:
@@ -115,6 +124,8 @@ services:
     container_name: rabbitmq-queue-two
     depends_on:
       - rabbitmq-stats
+    networks:
+      - nodejs 
     volumes:
       - rabbitmq-queue-two-data:/bitnami
     environment:
