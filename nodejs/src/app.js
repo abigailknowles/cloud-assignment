@@ -22,7 +22,6 @@ const connectionString = 'mongodb://localmongo1:27017,localmongo2:27017,localmon
 //retrieve the hostname of a node
 const os = require('os');
 var hostname = os.hostname;
-var containerName = os.container_name;
 // identify whether a node is alive or the leader
 var isAlive = false;
 var isLeader = false;
@@ -171,8 +170,8 @@ async function createContainer() {
     },
   };
   try {
-    await axios.post(`http://host.docker.internal:2375/containers/create?name=${containerName}`, containerDetails).then(function (response) { console.log(response) });
-    await axios.post(`http://host.docker.internal:2375/containers/${containerName}/start`);
+    await axios.post(`http://host.docker.internal:2375/containers/create?name=${hostname}`, containerDetails).then(function (response) { console.log(response) });
+    await axios.post(`http://host.docker.internal:2375/containers/${hostname}/start`);
   }
   catch (error) {
     console.log(error);

@@ -44,6 +44,8 @@ services:
     build: ./nodejs
     ports:
       - "81:3000"
+    networks:
+      - nodejs
     volumes:
       - ./nodejs/src:/usr/src/app/
     entrypoint:  [ "/bin/sh", "-c", "pm2-runtime app.js --watch"]
@@ -53,6 +55,8 @@ services:
     build: ./nodejs
     ports:
       - "82:3000"
+    networks:
+      - nodejs
     volumes:
       - ./nodejs/src:/usr/src/app/
     entrypoint:  [ "/bin/sh", "-c", "pm2-runtime app.js --watch"]
@@ -62,6 +66,8 @@ services:
     build: ./nodejs
     ports:
       - "83:3000"
+    networks:
+      - nodejs
     volumes:
       - ./nodejs/src:/usr/src/app/
     entrypoint:  [ "/bin/sh", "-c", "pm2-runtime app.js --watch"]
@@ -127,6 +133,8 @@ services:
     ports: 
       - 15672:15672 
       - 5672:5672
+    networks:
+      - nodejs
 
 
 volumes:
@@ -137,4 +145,7 @@ volumes:
   rabbitmq-queue-two-data:
     driver: local
 
+networks:
+  nodejs:
+    driver: bridge
 
