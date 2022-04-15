@@ -57,13 +57,13 @@ setInterval(function () {
       seconds = new Date().getTime() / 1000;
       isAlive = true;
 
-      msg = `{"id": "${nodeId}", "hostname": "${hostname}", "isAlive": "${isAlive}", "lastSeenAlive": "${seconds}" }`;
+      msg = `{"id": ${nodeId}, "hostname": "${hostname}", "isAlive": "${isAlive}", "lastSeenAlive": "${seconds}" }`;
 
       channel.assertExchange(exchange, 'fanout', {
         durable: false
       });
       channel.publish(exchange, '', Buffer.from(msg));
-      console.log("[x] Sent %s", msg);
+      //console.log("[x] Sent %s", msg);
     });
     //in 1/2 a second force close the connection
     setTimeout(function () {
@@ -101,7 +101,7 @@ amqp.connect('amqp://user:bitnami@cloud-assignment_haproxy_1', function (error0,
       channel.consume(q.queue, function (msg) {
 
         if (msg.content) {
-          console.log("Received [x] %s", msg.content.toString());
+          //console.log("Received [x] %s", msg.content.toString());
           messageQueueStarted = true;
 
           var messageContent = JSON.parse(msg.content.toString());
@@ -110,11 +110,8 @@ amqp.connect('amqp://user:bitnami@cloud-assignment_haproxy_1', function (error0,
           if (messageList.some(message => message.hostname === messageContent.hostname) === false) {
             messageList.push(messageContent);
           } else {
-            messageList.forEach((message) => {
-              if (message.hostname === messageContent.hostname) {
-                message.lastSeenAlive = "BOB";
-              }
-            });
+
+
           }
         }
       }, {
@@ -123,6 +120,7 @@ amqp.connect('amqp://user:bitnami@cloud-assignment_haproxy_1', function (error0,
     });
   });
 });
+
 
 
 //bind the express web service to the port specified
