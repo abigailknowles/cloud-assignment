@@ -53,6 +53,8 @@ services:
       - ./nodejs/src:/usr/src/app/
       - /var/run/docker.sock:/var/run/docker.sock
     entrypoint:  [ "/bin/sh", "-c", "pm2-runtime app.js --watch"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
   node2:  
     hostname: node2
     container_name: nodeContainer2
@@ -65,6 +67,8 @@ services:
       - ./nodejs/src:/usr/src/app/
       - /var/run/docker.sock:/var/run/docker.sock
     entrypoint:  [ "/bin/sh", "-c", "pm2-runtime app.js --watch"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
   node3:
     hostname: node3
     container_name: nodeContainer3
@@ -77,6 +81,8 @@ services:
       - ./nodejs/src:/usr/src/app/
       - /var/run/docker.sock:/var/run/docker.sock
     entrypoint:  [ "/bin/sh", "-c", "pm2-runtime app.js --watch"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
   nginx:
     container_name: "nginx"
     build: ./nginx
