@@ -143,9 +143,10 @@ setInterval(function () {
 setInterval(function () {
   if (isLeader) {
     messageList.forEach(message => {
+      console.log("last seen time: ", Math.round(seconds - message.lastSeenAlive))
       if (Math.round(seconds - message.lastSeenAlive) > 10) {
         message.isAlive = false;
-        console.log("I am DEAD: ", message.id);
+        console.log(`Node with ID: ${message.id} not seen for longer than 10 seconds`);
         createContainer();
       } else {
         message.isAlive = true;
