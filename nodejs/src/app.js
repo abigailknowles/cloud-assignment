@@ -161,7 +161,7 @@ function getTimeInSeconds() {
 
 async function createContainer() {
   var containerDetails = {
-    Image: "cloud-assignment_image",
+    Image: "cloud-assignment_node1",
     Hostname: `node_${messageList.length + 1}`,
     NetworkConfig: {
       EndpointsConfig: {
