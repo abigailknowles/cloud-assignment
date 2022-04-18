@@ -140,41 +140,62 @@ setInterval(function () {
   }
 }, 3000);
 
+
 setInterval(function () {
-  if (isLeader) {
-    messageList.forEach(message => {
-      console.log("last seen time: ", Math.round(seconds - message.lastSeenAlive))
-      if (Math.round(seconds - message.lastSeenAlive) > 10) {
-        message.isAlive = false;
-        console.log(`Node with ID: ${message.id} not seen for longer than 10 seconds`);
+  Object.entries(messageList).forEach(([index, message]) => {
+    console.log("last seen time: ", Math.round(seconds - message.lastSeenAlive))
+    if (Math.round(seconds - message.lastSeenAlive) > 10) {
+      message.isAlive = false;
+      console.log(`Node with ID: ${message.id} not seen for longer than 10 seconds`);
+      messageList.splice(index, 1);
+      if (isLeader) {
         createContainer();
-      } else {
-        message.isAlive = true;
       }
-    });
-    console.log("checked for dead message");
-  }
-}, 25000);
+    } else {
+      message.isAlive = true;
+    }
+  });
+  console.log("checked for dead message");
+}, 5000);
 
 function getTimeInSeconds() {
   return Math.round(new Date().getTime() / 1000, 2);
 }
 
 async function createContainer() {
+  var id = getRandomIntInclusive(100, 999);
+
   var containerDetails = {
     Image: "cloud-assignment_node1",
-    Hostname: `node_${messageList.length + 1}`,
+    Hostname: `node_${id}`,
     NetworkConfig: {
       EndpointsConfig: {
         "cloud-assignment_nodejs": {},
       },
     },
   };
+
   try {
-    await axios.post(`http://host.docker.internal:2375/containers/create?name=nodeContainer_${messageList.length + 1}`, containerDetails).then(function (response) { console.log(response) });
-    await axios.post(`http://host.docker.internal:2375/containers/nodeContainer_${messageList.length + 1}/start`);
+    await axios.post(`http://host.docker.internal:2375/containers/create?name=node_${id}`, containerDetails);
+    await axios.post(`http://host.docker.internal:2375/containers/node_${id}/start`);
   }
   catch (error) {
+    console.log(error);
+  }
+}
+
+function getRandomIntInclusive(min, max) {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min + 1) + min); //The maximum is inclusive and the minimum is inclusive
+}
+
+
+async function killContainer(id) {
+  try {
+    await axios.post(`http://host.docker.internal:2375/containers/${id}/kill`);
+    await axios.delete(`http://host.docker.internal:2375/containers/${id}`).then(function (response) { createContainer() });
+  } catch (error) {
     console.log(error);
   }
 }
