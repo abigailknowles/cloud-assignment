@@ -52,6 +52,8 @@ services:
     volumes:
       - ./nodejs/src:/usr/src/app/
     entrypoint:  [ "/bin/sh", "-c", "pm2-runtime app.js --watch"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
   node2:  
     hostname: node2
     container_name: nodeContainer2
@@ -63,6 +65,8 @@ services:
     volumes:
       - ./nodejs/src:/usr/src/app/
     entrypoint:  [ "/bin/sh", "-c", "pm2-runtime app.js --watch"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
   node3:
     hostname: node3
     container_name: nodeContainer3
@@ -74,6 +78,8 @@ services:
     volumes:
       - ./nodejs/src:/usr/src/app/
     entrypoint:  [ "/bin/sh", "-c", "pm2-runtime app.js --watch"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
   nginx:
     container_name: "nginx"
     build: ./nginx
@@ -85,7 +91,8 @@ services:
      - node3
     networks:
       - nodejs
-
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
       # Message tier
   rabbitmq-stats:
     image: bitnami/rabbitmq:3.8.14
