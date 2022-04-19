@@ -148,15 +148,21 @@ setInterval(function () {
     if (Math.round(seconds - message.lastSeenAlive) > 10) {
       message.isAlive = false;
       console.log(`Node with ID: ${message.id} not seen for longer than 10 seconds`);
-      messageList.splice(index, 1);
       if (isLeader) {
-        killContainer(message.hostname)
         createContainer();
       }
     } else {
       message.isAlive = true;
     }
   });
+
+  messageList.forEach(message => {
+    if (message.isAlive !== false) {
+      console.log(`killing host: ${message.hostname}`);
+      killContainer(message.hostname);
+    }
+  });
+
   console.log("checked for dead message");
 }, 5000);
 
