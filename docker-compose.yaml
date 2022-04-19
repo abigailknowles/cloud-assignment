@@ -42,8 +42,8 @@ services:
     restart: "no"
     entrypoint: [ "bash", "/scripts/mongo_setup.sh"]
   node1:
-    hostname: node1
-    container_name: nodeContainer1
+    hostname: node_1
+    container_name: container1
     build: ./nodejs
     ports:
       - "81:3000"
@@ -56,8 +56,8 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
   node2:  
-    hostname: node2
-    container_name: nodeContainer2
+    hostname: node_2
+    container_name: container2
     build: ./nodejs
     ports:
       - "82:3000"
@@ -70,8 +70,8 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
   node3:
-    hostname: node3
-    container_name: nodeContainer3
+    hostname: node_3
+    container_name: container3
     build: ./nodejs
     ports:
       - "83:3000"

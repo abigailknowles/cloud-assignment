@@ -22,6 +22,7 @@ const connectionString = 'mongodb://localmongo1:27017,localmongo2:27017,localmon
 //retrieve the hostname of a node
 const os = require('os');
 var hostname = os.hostname;
+
 // identify whether a node is alive or the leader
 var isAlive = false;
 var isLeader = false;
@@ -149,6 +150,7 @@ setInterval(function () {
       console.log(`Node with ID: ${message.id} not seen for longer than 10 seconds`);
       messageList.splice(index, 1);
       if (isLeader) {
+        killContainer(message.hostname)
         createContainer();
       }
     } else {
@@ -191,10 +193,10 @@ function getRandomIntInclusive(min, max) {
 }
 
 
-async function killContainer(id) {
+async function killContainer(hostname) {
   try {
-    await axios.post(`http://host.docker.internal:2375/containers/${id}/kill`);
-    await axios.delete(`http://host.docker.internal:2375/containers/${id}`).then(function (response) { createContainer() });
+    await axios.post(`http://host.docker.internal:2375/containers/${hostname}/kill`);
+    await axios.delete(`http://host.docker.internal:2375/containers/${hostname}`).then(function (response) { createContainer() });
   } catch (error) {
     console.log(error);
   }
