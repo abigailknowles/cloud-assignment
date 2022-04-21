@@ -1,195 +1,153 @@
-//Object data modelling library for mongo
 const mongoose = require('mongoose');
-
-//RabbitMQ
 var amqp = require('amqplib/callback_api');
-
-//Express web service library
 const express = require('express')
-
 const axios = require('axios');
-
-//used to parse the server response from json to object.
 const bodyParser = require('body-parser');
 
-//instance of express and port to use for inbound connections.
+/** 
+ * Global variables
+ */
 const app = express()
 const port = 3000
-
 //connection string listing the mongo servers. This is an alternative to using a load balancer. THIS SHOULD BE DISCUSSED IN YOUR ASSIGNMENT.
 const connectionString = 'mongodb://localmongo1:27017,localmongo2:27017,localmongo3:27017/notFLIX_DB?replicaSet=rs0';
-
-//retrieve the hostname of a node
 const os = require('os');
+
+var exchange = 'nodes';
 var hostname = os.hostname;
 
-// identify whether a node is alive or the leader
 var isAlive = false;
 var isLeader = false;
-
-var exchange;
-var msg;
 var messageQueueStarted = false;
 
 //generate node id and find current time in seconds
 var nodeId = Math.floor(Math.random() * (100 - 1 + 1) + 1);
 var seconds = getTimeInSeconds();
-
-//create a list of details about the nodes
 var nodes = { id: nodeId, hostname: hostname, isAlive: isAlive, lastSeenAlive: seconds };
 var messageList = [];
+var deadLetterQueue = [];
 messageList.push(nodes);
 
-//publisher
-setInterval(function () {
-  // connect to haproxy
-  amqp.connect('amqp://user:bitnami@cloud-assignment_haproxy_1', function (error0, connection) {
+/**
+ * 
+ * This is just the fucntion set up section
+ * 
+ */
 
-    //if connection failed throw error
-    if (error0) {
-      throw error0;
-    }
-    //create a channel if connected and send hello world to the logs Q
-    connection.createChannel(function (error1, channel) {
-      if (error1) {
-        throw error1;
-      }
-
-      exchange = 'nodes';
-      seconds = getTimeInSeconds();
-      isAlive = true;
-
-      msg = `{"id": ${nodeId}, "hostname": "${hostname}", "isAlive": "${isAlive}", "lastSeenAlive": "${seconds}" }`;
-
-      channel.assertExchange(exchange, 'fanout', {
-        durable: false
-      });
-      channel.publish(exchange, '', Buffer.from(msg));
-      //console.log("[x] Sent %s", msg);
-    });
-    //in 1/2 a second force close the connection
-    setTimeout(function () {
-      connection.close();
-    }, 500);
-  });
-}, 3000);
-
-//subscriber
-// connect to ha proxy
-
-amqp.connect('amqp://user:bitnami@cloud-assignment_haproxy_1', function (error0, connection) {
-  if (error0) {
-    throw error0;
-  }
+function createChannelAndPublishMessage(connection) {
+  //create a channel if connected and send hello world to the logs Q
   connection.createChannel(function (error1, channel) {
     if (error1) {
       throw error1;
     }
-    exchange = 'nodes';
+
+    isAlive = true;
+
+    var msg = `{"id": ${nodeId}, "hostname": "${hostname}", "isAlive": "${isAlive}", "lastSeenAlive": "${getTimeInSeconds()}" }`;
 
     channel.assertExchange(exchange, 'fanout', {
       durable: false
     });
 
-    channel.assertQueue('', {
-      exclusive: true
-    }, function (error2, q) {
+    channel.publish(exchange, '', Buffer.from(msg));
+
+  });
+}
+
+function processMessage(message) {
+  if (message.content) {
+    //console.log("Received [x] %s", msg.content.toString());
+    messageQueueStarted = true;
+
+    var content = JSON.parse(message.content.toString());
+    var newTime = getTimeInSeconds();
+
+    if (messageList.some(message => message.hostname === content.hostname) === false) {
+      messageList.push(content);
+    }
+    //might need to do something else here 
+  }
+}
+
+function createChannelAndConsumeMessages(connection) {
+  connection.createChannel(function (error1, channel) {
+    if (error1) {
+      throw error1;
+    }
+
+    channel.assertExchange(exchange, 'fanout', {
+      durable: false
+    });
+
+    channel.assertQueue('', { exclusive: true }, function (error2, q) {
       if (error2) {
         throw error2;
       }
       console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", q.queue);
       channel.bindQueue(q.queue, exchange, '');
 
-      channel.consume(q.queue, function (msg) {
+      channel.consume(q.queue, function (message) {
 
-        if (msg.content) {
-          //console.log("Received [x] %s", msg.content.toString());
-          messageQueueStarted = true;
+        processMessage(message);
 
-          var messageContent = JSON.parse(msg.content.toString());
-          var newTime = getTimeInSeconds();
-
-          if (messageList.some(message => message.hostname === messageContent.hostname) === false) {
-            messageList.push(messageContent);
-          } else {
-
-
-          }
-        }
       }, {
         noAck: true
       });
     });
   });
-});
+}
 
-// every 3 seconds check for a new leader and select one based on the highest id value
-setInterval(function () {
+function getHighestMessageId() {
+  var currentHighestNodeId = 0;
+  messageList.forEach(message => {
+    //for consistency across all nodes we need to find the current highest node id value
+
+    //if the message I'm looking at isn't mine, and the message id we are looking at is higher than the last message id we looked at
+    //set the last message id to be the current message id value
+    if (message.hostname !== hostname && message.id > currentHighestNodeId) {
+      currentHighestNodeId = message.id;
+    }
+  });
+}
+
+function selectNewLeader() {
   if (messageQueueStarted) {
-    var currentHighestNodeId = 0;
-    messageList.forEach(message => {
-      //for consistency across all nodes we need to find the current highest node id value
-      if (message.hostname !== hostname && message.id > currentHighestNodeId) {
-        currentHighestNodeId = message.id;
-      }
-    });
+    // get the highest message id in the list
+    var highestMessageId = getHighestMessageId();
 
-    //if this node has the highest id value set it to be the new leader
-    if (nodeId >= currentHighestNodeId)
+    //if my id is the highest id then I am the new leader
+    if (nodeId >= highestMessageId)
       isLeader = true;
 
+    // but what if I'm not??
   }
-}, 3000);
+}
 
-
-setInterval(function () {
+function createDeadLettersForProcessing() {
   Object.entries(messageList).forEach(([index, message]) => {
     console.log("last seen time: ", Math.round(seconds - message.lastSeenAlive))
     if (Math.round(seconds - message.lastSeenAlive) > 10) {
       message.isAlive = false;
       console.log(`Node with ID: ${message.id} not seen for longer than 10 seconds`);
-      if (isLeader) {
-        createContainer();
-      }
-    } else {
-      message.isAlive = true;
+      deadLetterQueue.push(message);
     }
   });
+}
 
-  messageList.forEach(message => {
-    if (message.isAlive !== false) {
-      console.log(`killing host: ${message.hostname}`);
-      killContainer(message.hostname);
+function processDeadLetterQueue() {
+  deadLetterQueue.forEach(message => {
+    if (isLeader) {
+      createContainer();
     }
+    console.log(`killing host: ${message.hostname}`);
+    killContainer(message.hostname);
   });
 
-  console.log("checked for dead message");
-}, 5000);
+  deadLetterQueue = [];
+}
 
 function getTimeInSeconds() {
   return Math.round(new Date().getTime() / 1000, 2);
-}
-
-async function createContainer() {
-  var id = getRandomIntInclusive(100, 999);
-
-  var containerDetails = {
-    Image: "cloud-assignment_node1",
-    Hostname: `node_${id}`,
-    NetworkConfig: {
-      EndpointsConfig: {
-        "cloud-assignment_nodejs": {},
-      },
-    },
-  };
-
-  try {
-    await axios.post(`http://host.docker.internal:2375/containers/create?name=node_${id}`, containerDetails);
-    await axios.post(`http://host.docker.internal:2375/containers/node_${id}/start`);
-  }
-  catch (error) {
-    console.log(error);
-  }
 }
 
 function getRandomIntInclusive(min, max) {
@@ -198,16 +156,109 @@ function getRandomIntInclusive(min, max) {
   return Math.floor(Math.random() * (max - min + 1) + min); //The maximum is inclusive and the minimum is inclusive
 }
 
-
-async function killContainer(hostname) {
-  try {
-    await axios.post(`http://host.docker.internal:2375/containers/${hostname}/kill`);
-    await axios.delete(`http://host.docker.internal:2375/containers/${hostname}`).then(function (response) { createContainer() });
-  } catch (error) {
-    console.log(error);
-  }
+function getContainerConfig(id) {
+  return {
+    Image: "cloud-assignment_node1",
+    Hostname: `node_${id}`,
+    NetworkConfig: {
+      EndpointsConfig: {
+        "cloud-assignment_nodejs": {},
+      },
+    },
+  };
 }
 
+function startContainer(id) {
+  await axios.post(`http://host.docker.internal:2375/containers/node_${id}/start`).then((response) => {
+    console.log("container start succeeded");
+  }, (error) => {
+    console.log("Exception starting container");
+    console.log(error);
+  });
+}
+
+async function createContainer() {
+  var id = getRandomIntInclusive(100, 999);
+
+  var config = getContainerConfig(id)
+
+  await axios.post(`http://host.docker.internal:2375/containers/create?name=node_${id}`, config).then((response) => {
+    startContainer(id);
+  }, (error) => {
+    console.log("Exception creating container");
+    console.log(error);
+  });
+}
+
+async function killContainer(id) {
+  await axios.post(`http://host.docker.internal:2375/containers/${id}/kill`).then((response) => {
+    deleteContainer(id);
+  }, (error) => {
+    console.log("Exception killing container");
+    console.log(error);
+  });
+}
+
+function deleteContainer(id) {
+  await axios.delete(`http://host.docker.internal:2375/containers/${id}`).then((response) => {
+    console.log("deletion success");
+  }, (error) => {
+    console.log("Exception deleting container");
+    console.log(error);
+  });
+}
+
+/**
+ * 
+ * This is the pub / sub section
+ * 
+ */
+//publisher
+setInterval(function () {
+  // connect to haproxy
+  amqp.connect('amqp://user:bitnami@cloud-assignment_haproxy_1', function (error0, connection) {
+    if (error0) {
+      throw error0;
+    }
+
+    createChannelAndPublishMessage(connection);
+
+    //in 1/2 a second force close the connection
+    setTimeout(function () {
+      connection.close();
+    }, 500);
+  }, 3000);
+});
+
+
+// Subscriber
+amqp.connect('amqp://user:bitnami@cloud-assignment_haproxy_1', function (error0, connection) {
+  if (error0) {
+    throw error0;
+  }
+
+  createChannelAndConsumeMessages(connection)
+
+});
+
+// every 3 seconds check if a new leader is required and select one based on the highest id value
+setInterval(function () {
+  selectNewLeader();
+}, 3000);
+
+
+setInterval(function () {
+  console.log("checking for and processing dead letters");
+  createDeadLettersForProcessing();
+
+  processDeadLetterQueue();
+}, 5000);
+
+/**
+ * 
+ * mongoose stuff
+ * 
+ */
 //bind the express web service to the port specified
 app.listen(port, () => {
   console.log(`Express Application listening at port ` + port)
