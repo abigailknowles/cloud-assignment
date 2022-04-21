@@ -168,7 +168,7 @@ function getContainerConfig(id) {
   };
 }
 
-function startContainer(id) {
+async function startContainer(id) {
   await axios.post(`http://host.docker.internal:2375/containers/node_${id}/start`).then((response) => {
     console.log("container start succeeded");
   }, (error) => {
@@ -199,7 +199,7 @@ async function killContainer(id) {
   });
 }
 
-function deleteContainer(id) {
+async function deleteContainer(id) {
   await axios.delete(`http://host.docker.internal:2375/containers/${id}`).then((response) => {
     console.log("deletion success");
   }, (error) => {
