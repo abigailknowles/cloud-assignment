@@ -173,7 +173,7 @@ function startContainer(id) {
     console.log("container start succeeded");
   }, (error) => {
     console.log("Exception starting container");
-    console.log(error);
+    console.log(error.response.data);
   });
 }
 
@@ -186,7 +186,7 @@ async function createContainer() {
     startContainer(id);
   }, (error) => {
     console.log("Exception creating container");
-    console.log(error);
+    console.log(error.response.data);
   });
 }
 
@@ -195,7 +195,7 @@ async function killContainer(id) {
     deleteContainer(id);
   }, (error) => {
     console.log("Exception killing container");
-    console.log(error);
+    console.log(error.response.data);
   });
 }
 
@@ -204,7 +204,7 @@ function deleteContainer(id) {
     console.log("deletion success");
   }, (error) => {
     console.log("Exception deleting container");
-    console.log(error);
+    console.log(error.response.data);
   });
 }
 
@@ -221,7 +221,22 @@ setInterval(function () {
       throw error0;
     }
 
-    createChannelAndPublishMessage(connection);
+    connection.createChannel(function (error1, channel) {
+      if (error1) {
+        throw error1;
+      }
+
+      isAlive = true;
+
+      var msg = `{"id": ${nodeId}, "hostname": "${hostname}", "isAlive": "${isAlive}", "lastSeenAlive": "${getTimeInSeconds()}" }`;
+
+      channel.assertExchange(exchange, 'fanout', {
+        durable: false
+      });
+
+      channel.publish(exchange, '', Buffer.from(msg));
+
+    });
 
     //in 1/2 a second force close the connection
     setTimeout(function () {
@@ -237,7 +252,31 @@ amqp.connect('amqp://user:bitnami@cloud-assignment_haproxy_1', function (error0,
     throw error0;
   }
 
-  createChannelAndConsumeMessages(connection)
+  connection.createChannel(function (error1, channel) {
+    if (error1) {
+      throw error1;
+    }
+
+    channel.assertExchange(exchange, 'fanout', {
+      durable: false
+    });
+
+    channel.assertQueue('', { exclusive: true }, function (error2, q) {
+      if (error2) {
+        throw error2;
+      }
+      console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", q.queue);
+      channel.bindQueue(q.queue, exchange, '');
+
+      channel.consume(q.queue, function (message) {
+
+        processMessage(message);
+
+      }, {
+        noAck: true
+      });
+    });
+  });
 
 });
 
