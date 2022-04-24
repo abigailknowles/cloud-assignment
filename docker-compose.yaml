@@ -1,31 +1,37 @@
 version: "3"
 services:
-  mongo1:
+  mongodb:
     hostname: mongo1
-    container_name: localmongo1
+    container_name: mongo1
     image: mongo:4.0-xenial
     ports:
       - "40001:27017"
       - "27017:27017"
-      
+    networks:
+      - nodejs
     restart: always
     entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "rs0" ]
   mongo2:
     hostname: mongo2
-    container_name: localmongo2
+    container_name: mongo2
     image: mongo:4.0-xenial
     ports:
       - "40002:27017"
+    networks:
+      - nodejs
     restart: always
     entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "rs0" ]
   mongo3:
     hostname: mongo3
-    container_name: localmongo3
+    container_name: mongo3
     image: mongo:4.0-xenial
     ports:
       - "40003:27017"
+    networks:
+      - nodejs
     restart: always
     entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "rs0" ]
+
   mongosetup:
     image: mongo:4.0-xenial
     depends_on:
@@ -36,42 +42,9 @@ services:
       - ./scripts:/scripts
     restart: "no"
     entrypoint: [ "bash", "/scripts/mongo_setup.sh"]
+    networks:
+      - nodejs
 
-
-  node1:
-    hostname: node1
-    build: ./nodejs
-    ports:
-      - "81:3000"
-    volumes:
-      - ./nodejs/src:/usr/src/app/
-    entrypoint:  [ "/bin/sh", "-c", "pm2-runtime app.js --watch"]
-  node2:  
-    hostname: node2
-    build: ./nodejs
-    ports:
-      - "82:3000"
-    volumes:
-      - ./nodejs/src:/usr/src/app/
-    entrypoint:  [ "/bin/sh", "-c", "pm2-runtime app.js --watch"]
-  node3:
-    hostname: node3
-    build: ./nodejs
-    ports:
-      - "83:3000"
-    volumes:
-      - ./nodejs/src:/usr/src/app/
-    entrypoint:  [ "/bin/sh", "-c", "pm2-runtime app.js --watch"]
-  nginx:
-    build: ./nginx
-    ports:
-      - "80:80"
-    depends_on:
-     - node1
-     - node2
-     - node3
-
-      # Message tier
   rabbitmq-stats:
     image: bitnami/rabbitmq:3.8.14
     container_name: rabbitmq-stats
@@ -84,12 +57,16 @@ services:
       - RABBITMQ_DISK_FREE_ABSOLUTE_LIMIT=500MB
     ports:
       - "50001:15672"
+    networks:
+      - nodejs 
 
   rabbitmq-queue-one:
     image: bitnami/rabbitmq:3.8.14
     container_name: rabbitmq-queue-one
     depends_on:
       - rabbitmq-stats
+    networks:
+      - nodejs 
     volumes:
       - rabbitmq-queue-one-data:/bitnami
     environment:
@@ -104,6 +81,8 @@ services:
     container_name: rabbitmq-queue-two
     depends_on:
       - rabbitmq-stats
+    networks:
+      - nodejs 
     volumes:
       - rabbitmq-queue-two-data:/bitnami
     environment:
@@ -114,7 +93,8 @@ services:
       - RABBITMQ_DISK_FREE_ABSOLUTE_LIMIT=500MB
 
   haproxy: 
-    image: haproxy:1.7 
+    image: haproxy:1.7
+    hostname: cloud_haproxy_1 
     volumes: 
       - ./rabbitmq/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro 
     depends_on: 
@@ -124,6 +104,65 @@ services:
     ports: 
       - 15672:15672 
       - 5672:5672
+    networks:
+      - nodejs
+
+  node1:
+    hostname: container1
+    container_name: container1
+    build: ./nodejs
+    ports:
+      - "81:3000"
+    networks:
+      - nodejs
+    volumes:
+      - ./nodejs/src:/usr/src/app/
+      - /var/run/docker.sock:/var/run/docker.sock
+    entrypoint:  [ "/bin/sh", "-c", "pm2-runtime app.js --watch"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  node2:
+    hostname: container2
+    container_name: container2
+    build: ./nodejs
+    ports:
+      - "82:3000"
+    networks:
+      - nodejs
+    volumes:
+      - ./nodejs/src:/usr/src/app/
+      - /var/run/docker.sock:/var/run/docker.sock
+    entrypoint:  [ "/bin/sh", "-c", "pm2-runtime app.js --watch"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  node3:
+    hostname: container3
+    container_name: container3
+    build: ./nodejs
+    ports:
+      - "83:3000"
+    networks:
+      - nodejs
+    volumes:
+      - ./nodejs/src:/usr/src/app/
+      - /var/run/docker.sock:/var/run/docker.sock
+    entrypoint:  [ "/bin/sh", "-c", "pm2-runtime app.js --watch"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  nginx:
+    container_name: "nginx"
+    build: ./nginx
+    ports:
+      - "80:80"
+    depends_on:
+     - node1
+     - node2
+     - node3
+    networks:
+      - nodejs
 
 
 volumes:
@@ -134,4 +173,6 @@ volumes:
   rabbitmq-queue-two-data:
     driver: local
 
-
+networks:
+  nodejs:
+    driver: bridge
