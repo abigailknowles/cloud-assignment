@@ -6,7 +6,7 @@ const app = express()
 const port = 3000
 
 //connection string listing the mongo servers. This is an alternative to using a load balancer. THIS SHOULD BE DISCUSSED IN YOUR ASSIGNMENT.
-const connectionString = 'mongodb://mongo1:27017/notFLIX_DB?replicaSet=rs0';
+const connectionString = 'mongodb://mongo1:27017,mongo2:27017,mongo3:27017/notFLIX_DB?replicaSet=rs0';
 
 //bind the express web service to the port specified
 app.listen(port, () => {
