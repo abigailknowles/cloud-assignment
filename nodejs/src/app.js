@@ -1,303 +1,13 @@
+//Object data modelling library for mongo
 const mongoose = require('mongoose');
-var amqp = require('amqplib/callback_api');
-const express = require('express')
-const axios = require('axios');
 const bodyParser = require('body-parser');
-
-/** 
- * Global variables
- */
+const express = require('express')
 const app = express()
 const port = 3000
+
 //connection string listing the mongo servers. This is an alternative to using a load balancer. THIS SHOULD BE DISCUSSED IN YOUR ASSIGNMENT.
-const connectionString = 'mongodb://localmongo1:27017,localmongo2:27017,localmongo3:27017/notFLIX_DB?replicaSet=rs0';
-const os = require('os');
+const connectionString = 'mongodb://mongo1:27017/notFLIX_DB?replicaSet=rs0';
 
-var exchange = 'nodes';
-var hostname = os.hostname;
-
-var isAlive = false;
-var isLeader = false;
-var messageQueueStarted = false;
-
-//generate node id and find current time in seconds
-var nodeId = Math.floor(Math.random() * (100 - 1 + 1) + 1);
-var seconds = getTimeInSeconds();
-var nodes = { id: nodeId, hostname: hostname, isAlive: isAlive, lastSeenAlive: seconds };
-var messageList = [];
-var deadLetterQueue = [];
-messageList.push(nodes);
-
-/**
- * 
- * This is just the fucntion set up section
- * 
- */
-
-function createChannelAndPublishMessage(connection) {
-  //create a channel if connected and send hello world to the logs Q
-  connection.createChannel(function (error1, channel) {
-    if (error1) {
-      throw error1;
-    }
-
-    isAlive = true;
-
-    var msg = `{"id": ${nodeId}, "hostname": "${hostname}", "isAlive": "${isAlive}", "lastSeenAlive": "${getTimeInSeconds()}" }`;
-
-    channel.assertExchange(exchange, 'fanout', {
-      durable: false
-    });
-
-    channel.publish(exchange, '', Buffer.from(msg));
-
-  });
-}
-
-function processMessage(message) {
-  if (message.content) {
-    //console.log("Received [x] %s", msg.content.toString());
-    messageQueueStarted = true;
-
-    var content = JSON.parse(message.content.toString());
-    var newTime = getTimeInSeconds();
-
-    if (messageList.some(message => message.hostname === content.hostname) === false) {
-      messageList.push(content);
-    }
-    //might need to do something else here 
-  }
-}
-
-function createChannelAndConsumeMessages(connection) {
-  connection.createChannel(function (error1, channel) {
-    if (error1) {
-      throw error1;
-    }
-
-    channel.assertExchange(exchange, 'fanout', {
-      durable: false
-    });
-
-    channel.assertQueue('', { exclusive: true }, function (error2, q) {
-      if (error2) {
-        throw error2;
-      }
-      console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", q.queue);
-      channel.bindQueue(q.queue, exchange, '');
-
-      channel.consume(q.queue, function (message) {
-
-        processMessage(message);
-
-      }, {
-        noAck: true
-      });
-    });
-  });
-}
-
-function getHighestMessageId() {
-  var currentHighestNodeId = 0;
-  messageList.forEach(message => {
-    //for consistency across all nodes we need to find the current highest node id value
-
-    //if the message I'm looking at isn't mine, and the message id we are looking at is higher than the last message id we looked at
-    //set the last message id to be the current message id value
-    if (message.hostname !== hostname && message.id > currentHighestNodeId) {
-      currentHighestNodeId = message.id;
-    }
-  });
-}
-
-function selectNewLeader() {
-  if (messageQueueStarted) {
-    // get the highest message id in the list
-    var highestMessageId = getHighestMessageId();
-
-    //if my id is the highest id then I am the new leader
-    if (nodeId >= highestMessageId)
-      isLeader = true;
-
-    // but what if I'm not??
-  }
-}
-
-function createDeadLettersForProcessing() {
-  Object.entries(messageList).forEach(([index, message]) => {
-    console.log("last seen time: ", Math.round(seconds - message.lastSeenAlive))
-    if (Math.round(seconds - message.lastSeenAlive) > 10) {
-      message.isAlive = false;
-      console.log(`Node with ID: ${message.id} not seen for longer than 10 seconds`);
-      deadLetterQueue.push(message);
-    }
-  });
-}
-
-function processDeadLetterQueue() {
-  deadLetterQueue.forEach(message => {
-    if (isLeader) {
-      createContainer();
-    }
-    console.log(`killing host: ${message.hostname}`);
-    killContainer(message.hostname);
-  });
-
-  deadLetterQueue = [];
-}
-
-function getTimeInSeconds() {
-  return Math.round(new Date().getTime() / 1000, 2);
-}
-
-function getRandomIntInclusive(min, max) {
-  min = Math.ceil(min);
-  max = Math.floor(max);
-  return Math.floor(Math.random() * (max - min + 1) + min); //The maximum is inclusive and the minimum is inclusive
-}
-
-function getContainerConfig(id) {
-  return {
-    Image: "cloud-assignment_node1",
-    Hostname: `node_${id}`,
-    NetworkConfig: {
-      EndpointsConfig: {
-        "cloud-assignment_nodejs": {},
-      },
-    },
-  };
-}
-
-async function startContainer(id) {
-  await axios.post(`http://host.docker.internal:2375/containers/node_${id}/start`).then((response) => {
-    console.log("container start succeeded");
-  }, (error) => {
-    console.log("Exception starting container");
-    console.log(error.response.data);
-  });
-}
-
-async function createContainer() {
-  var id = getRandomIntInclusive(100, 999);
-
-  var config = getContainerConfig(id)
-
-  await axios.post(`http://host.docker.internal:2375/containers/create?name=node_${id}`, config).then((response) => {
-    startContainer(id);
-  }, (error) => {
-    console.log("Exception creating container");
-    console.log(error.response.data);
-  });
-}
-
-async function killContainer(id) {
-  await axios.post(`http://host.docker.internal:2375/containers/${id}/kill`).then((response) => {
-    deleteContainer(id);
-  }, (error) => {
-    console.log("Exception killing container");
-    console.log(error.response.data);
-  });
-}
-
-async function deleteContainer(id) {
-  await axios.delete(`http://host.docker.internal:2375/containers/${id}`).then((response) => {
-    console.log("deletion success");
-  }, (error) => {
-    console.log("Exception deleting container");
-    console.log(error.response.data);
-  });
-}
-
-/**
- * 
- * This is the pub / sub section
- * 
- */
-//publisher
-setInterval(function () {
-  // connect to haproxy
-  amqp.connect('amqp://user:bitnami@cloud-assignment_haproxy_1', function (error0, connection) {
-    if (error0) {
-      throw error0;
-    }
-
-    connection.createChannel(function (error1, channel) {
-      if (error1) {
-        throw error1;
-      }
-
-      isAlive = true;
-
-      var msg = `{"id": ${nodeId}, "hostname": "${hostname}", "isAlive": "${isAlive}", "lastSeenAlive": "${getTimeInSeconds()}" }`;
-
-      channel.assertExchange(exchange, 'fanout', {
-        durable: false
-      });
-
-      channel.publish(exchange, '', Buffer.from(msg));
-
-    });
-
-    //in 1/2 a second force close the connection
-    setTimeout(function () {
-      connection.close();
-    }, 500);
-  }, 3000);
-});
-
-
-// Subscriber
-amqp.connect('amqp://user:bitnami@cloud-assignment_haproxy_1', function (error0, connection) {
-  if (error0) {
-    throw error0;
-  }
-
-  connection.createChannel(function (error1, channel) {
-    if (error1) {
-      throw error1;
-    }
-
-    channel.assertExchange(exchange, 'fanout', {
-      durable: false
-    });
-
-    channel.assertQueue('', { exclusive: true }, function (error2, q) {
-      if (error2) {
-        throw error2;
-      }
-      console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", q.queue);
-      channel.bindQueue(q.queue, exchange, '');
-
-      channel.consume(q.queue, function (message) {
-
-        processMessage(message);
-
-      }, {
-        noAck: true
-      });
-    });
-  });
-
-});
-
-// every 3 seconds check if a new leader is required and select one based on the highest id value
-setInterval(function () {
-  selectNewLeader();
-}, 3000);
-
-
-setInterval(function () {
-  console.log("checking for and processing dead letters");
-  createDeadLettersForProcessing();
-
-  processDeadLetterQueue();
-}, 5000);
-
-/**
- * 
- * mongoose stuff
- * 
- */
 //bind the express web service to the port specified
 app.listen(port, () => {
   console.log(`Express Application listening at port ` + port)
@@ -308,7 +18,6 @@ app.use(bodyParser.json());
 
 //connect to the cluster
 mongoose.connect(connectionString, { useNewUrlParser: true, useUnifiedTopology: true });
-
 
 var db = mongoose.connection;
 db.on('error', console.error.bind(console, 'MongoDB connection error:'));
@@ -354,3 +63,269 @@ app.delete('/', (req, res) => {
 })
 
 
+/**
+ * 
+ * message processing
+ * 
+ */
+//RabbitMQ
+const axios = require('axios');
+const os = require('os');
+
+var amqp = require('amqplib/callback_api');
+const { Console } = require('console');
+var hostname = os.hostname;
+var exchange = 'nodes';
+var isAlive = false;
+var isLeader = false;
+var msg;
+var messageQueueStarted = false;
+var nodeId = Math.floor(Math.random() * (100 - 1 + 1) + 1);
+var seconds = getTimeInSeconds();
+var messageList = [];
+var scaledOut = false;
+
+function main() {
+
+  setInterval(publishMessages, 5000);
+
+  processMessages();
+
+  setInterval(selectNewLeader, 2000);
+
+  setInterval(processDeadLetterQueue, 2000);
+
+  setInterval(scaleOut, 5000);
+
+  setInterval(scaleIn, 5000);
+}
+
+function publishMessages() {
+  amqp.connect('amqp://user:bitnami@cloud-assignment_haproxy_1', function (error0, connection) {
+
+    //if connection failed throw error
+    if (error0) {
+      throw error0;
+    }
+
+    //create a channel if connected and send hello world to the logs Q
+    connection.createChannel(function (error1, channel) {
+      if (error1) {
+        throw error1;
+      }
+
+      seconds = getTimeInSeconds();
+      if (!isLeader) {
+        seconds = seconds + 2
+      } else {
+        seconds = seconds - 2
+      }
+
+      isAlive = true;
+
+      msg = `{"id": ${nodeId}, "hostname": "${hostname}", "isAlive": "${isAlive}", "lastSeenAlive": "${seconds}" }`;
+
+      channel.assertExchange(exchange, 'fanout', {
+        durable: false
+      });
+
+      channel.publish(exchange, '', Buffer.from(msg));
+
+      //in 1/2 a second force close the connection
+      setTimeout(function () {
+        connection.close();
+      }, 500);
+    });
+  });
+}
+
+function processMessages() {
+  amqp.connect('amqp://user:bitnami@cloud-assignment_haproxy_1', function (error0, connection) {
+    if (error0) {
+      throw error0;
+    }
+
+    connection.createChannel(function (error1, channel) {
+      if (error1) {
+        throw error1;
+      }
+
+      channel.assertExchange(exchange, 'fanout', { durable: false });
+
+      channel.assertQueue('', { exclusive: true }, function (error2, q) {
+        if (error2) {
+          throw error2;
+        }
+
+        console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", q.queue);
+        channel.bindQueue(q.queue, exchange, '');
+
+        channel.consume(q.queue, function (msg) {
+          processMessage(msg);
+        }, {
+          noAck: true
+        });
+      });
+    });
+  });
+}
+
+function processMessage(msg) {
+  if (msg.content) {
+    if (isLeader) {
+      console.log("PROCESSING MESSAGE: ", msg.content.toString())
+    }
+    messageQueueStarted = true;
+
+    var messageContent = JSON.parse(msg.content.toString());
+
+    if (messageList.some(message => message.hostname === messageContent.hostname) === false) {
+      messageList.push(messageContent);
+    } else {
+      var message = messageList.find(message => message.hostname === messageContent.hostname);
+
+      if (message.id !== messageContent.nodeId)
+        message.id = messageContent.nodeId;
+
+      message.seconds = seconds;
+    }
+  }
+}
+
+function getTimeInSeconds() {
+  return Math.round(new Date().getTime() / 1000, 2);
+}
+
+function selectNewLeader() {
+  if (messageQueueStarted) {
+    var currentHighestNodeId = 0;
+    messageList.forEach(message => {
+      //for consistency across all nodes we need to find the current highest node id value
+      if (message.hostname !== hostname && message.id > currentHighestNodeId) {
+        currentHighestNodeId = message.id;
+      }
+    });
+
+    //if this node has the highest id value set it to be the new leader
+    if (nodeId >= currentHighestNodeId) {
+      isLeader = true;
+    } else {
+      isLeader = false;
+    }
+  }
+}
+
+function processDeadLetterQueue() {
+  var deadLetterQueue = [];
+  Object.entries(messageList).forEach(([index, message]) => {
+    if (Math.round(seconds - message.lastSeenAlive) > 20) {
+      message.isAlive = false;
+      deadLetterQueue.push({ "id": index, "message": message });
+    } else {
+      message.isAlive = true;
+    }
+  });
+
+  for (let i = 0; i < deadLetterQueue.length; i++) {
+    if (isLeader) {
+      console.log(`RESTARTING NODE: ${deadLetterQueue[i].message.hostname}`);
+      var details = {
+        Image: "abbie_node1",
+        Hostname: "container" + getRandomIntInclusive(100, 999),
+        NetworkingConfig: {
+          EndpointsConfig: {
+            "abbie_nodejs": {},
+          }
+        }
+      }
+
+      startContainer(details);
+
+    }
+
+    stopContainer(deadLetterQueue[i].message.hostname);
+    messageList.splice(deadLetterQueue[i].id);
+  }
+}
+
+function getRandomIntInclusive(min, max) {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min + 1) + min); //The maximum is inclusive and the minimum is inclusive
+}
+
+var containerDetails = [{
+  Image: "abbie_node1",
+  Hostname: "container4",
+  NetworkingConfig: {
+    EndpointsConfig: {
+      "abbie_nodejs": {},
+    },
+  },
+
+}, {
+  Image: "abbie_node1",
+  Hostname: "container5",
+  NetworkingConfig: {
+    EndpointsConfig: {
+      "abbie_nodejs": {},
+    },
+  },
+}];
+
+async function startContainer(details) {
+  try {
+    await axios.post(`http://host.docker.internal:2375/containers/create?name=${details.Hostname}`, details);
+    await axios.post(`http://host.docker.internal:2375/containers/${details.Hostname}/start`);
+  } catch (error) {
+    if (error.response.statusText === "Conflict") {
+      console.log("already scaled out, action not required");
+    } else {
+      console.log(error);
+    }
+
+  }
+}
+
+async function stopContainer(hostname) {
+  try {
+    await axios.post(`http://host.docker.internal:2375/containers/${hostname}/kill`);
+    await axios.delete(`http://host.docker.internal:2375/containers/${hostname}`);
+  } catch (error) {
+    if (error.response.statusText === "Conflict") {
+      console.log("already scaled in, action not required");
+    } else {
+      console.log(error);
+    }
+  }
+}
+
+function scaleOut() {
+  if (!scaledOut && isLeader) {
+    var currentHour = new Date().getHours();
+    console.log("CURRENT HOUR: ", currentHour);
+    if (currentHour >= 15 && currentHour < 18) {
+      containerDetails.forEach(details => {
+        startContainer(details);
+      })
+      scaledOut = true;
+    }
+  }
+}
+
+function scaleIn() {
+  if (scaledOut && isLeader) {
+    var currentHour = new Date().getHours();
+    if (currentHour < 15 && currentHour >= 18) {
+      var container1 = messageList.slice(-1)[0];
+      var container2 = messageList.slice(-1)[0];
+
+      stopContainer(container1.Hostname);
+      stopContainer(container2.Hostname);
+
+      scaledOut = false;
+    }
+  }
+}
+
+main();

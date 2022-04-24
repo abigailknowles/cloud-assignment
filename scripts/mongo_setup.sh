@@ -10,17 +10,17 @@ mongo --host mongo1:27017 <<EOF
     "members": [
       {
         "_id": 0,
-        "host": "localmongo1:27017",
+        "host": "mongo1:27017",
         "priority": 2
       },
       {
         "_id": 1,
-        "host": "localmongo2:27017",
+        "host": "mongo2:27017",
         "priority": 0
       },
       {
         "_id": 2,
-        "host": "localmongo3:27017",
+        "host": "mongo3:27017",
         "priority": 0
       }
     ]
