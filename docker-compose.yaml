@@ -94,7 +94,7 @@ services:
 
   haproxy: 
     image: haproxy:1.7
-    hostname: cloud-assignment_haproxy_1 
+    hostname: cloud_haproxy_1 
     volumes: 
       - ./rabbitmq/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro 
     depends_on: 

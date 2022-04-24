@@ -101,7 +101,7 @@ function main() {
 }
 
 function publishMessages() {
-  amqp.connect('amqp://user:bitnami@cloud-assignment_haproxy_1', function (error0, connection) {
+  amqp.connect('amqp://user:bitnami@cloud_haproxy_1', function (error0, connection) {
 
     //if connection failed throw error
     if (error0) {
@@ -140,7 +140,7 @@ function publishMessages() {
 }
 
 function processMessages() {
-  amqp.connect('amqp://user:bitnami@cloud-assignment_haproxy_1', function (error0, connection) {
+  amqp.connect('amqp://user:bitnami@cloud_haproxy_1', function (error0, connection) {
     if (error0) {
       throw error0;
     }
@@ -207,9 +207,11 @@ function selectNewLeader() {
     });
 
     //if this node has the highest id value set it to be the new leader
-    if (nodeId >= currentHighestNodeId) {
+    if (nodeId > currentHighestNodeId) {
       isLeader = true;
+      console.log("I am the leader: " + nodeId)
     } else {
+      // setting this incase a new node is selected leader, with a higher ID than mine
       isLeader = false;
     }
   }
@@ -225,16 +227,17 @@ function processDeadLetterQueue() {
       message.isAlive = true;
     }
   });
-
+  //handle the dead letters
+  // TODO: could split these out into smaller functions
   for (let i = 0; i < deadLetterQueue.length; i++) {
     if (isLeader) {
-      console.log(`RESTARTING NODE: ${deadLetterQueue[i].message.hostname}`);
+      console.log(`STARTING NODE: ${deadLetterQueue[i].message.hostname}`);
       var details = {
-        Image: "abbie_node1",
+        Image: "cloud_node1",
         Hostname: "container" + getRandomIntInclusive(100, 999),
         NetworkingConfig: {
           EndpointsConfig: {
-            "abbie_nodejs": {},
+            "cloud_nodejs": {},
           }
         }
       }
@@ -255,20 +258,20 @@ function getRandomIntInclusive(min, max) {
 }
 
 var containerDetails = [{
-  Image: "abbie_node1",
-  Hostname: "container4",
+  Image: "cloud_node1",
+  Hostname: "container" + getRandomIntInclusive(100, 999),
   NetworkingConfig: {
     EndpointsConfig: {
-      "abbie_nodejs": {},
+      "cloud_nodejs": {},
     },
   },
 
 }, {
-  Image: "abbie_node1",
-  Hostname: "container5",
+  Image: "cloud_node1",
+  Hostname: "container" + getRandomIntInclusive(100, 999),
   NetworkingConfig: {
     EndpointsConfig: {
-      "abbie_nodejs": {},
+      "cloud_nodejs": {},
     },
   },
 }];
@@ -304,7 +307,8 @@ function scaleOut() {
   if (!scaledOut && isLeader) {
     var currentHour = new Date().getHours();
     console.log("CURRENT HOUR: ", currentHour);
-    if (currentHour >= 15 && currentHour < 18) {
+    //accounting for daylight saving
+    if (currentHour >= 15 && currentHour < 17) {
       containerDetails.forEach(details => {
         startContainer(details);
       })
@@ -316,9 +320,11 @@ function scaleOut() {
 function scaleIn() {
   if (scaledOut && isLeader) {
     var currentHour = new Date().getHours();
-    if (currentHour < 15 && currentHour >= 18) {
+    //accounting for daylight saving
+    if (currentHour < 15 && currentHour >= 17) {
+      //removing item out of list at index 0 
       var container1 = messageList.slice(-1)[0];
-      var container2 = messageList.slice(-1)[0];
+      var container2 = messageList.slice(-2)[0];
 
       stopContainer(container1.Hostname);
       stopContainer(container2.Hostname);
