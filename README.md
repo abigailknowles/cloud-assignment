@@ -66,6 +66,7 @@ Being transparent, this code still has a few intermitent bugs and I would have l
 - There is currently a race condition where some containers are created, but not started and because they aren't created at the time of starting, they are not added to the current message queue and therefor not deleted. This is because the async function doesn't wait until create has finished before it runs start.
 - There is a bug where containers are starting up and showing a socket error, I predict this is also a race condition where the containers are trying to communicate with mongo before it has started, once the solution has fully loaded this error goes
 - There is also an intermitent bug of two nodes sometimes outputting that they are the leader, I believe this is a timing issue and they are checking the list at the same time. This bug resolves itself after a few seconds and then only one leader is identified
+- An intermitent error with mongo db has started happening where it says mongodb has timed out. This never happened before and upon researching it can be a system/network issue so you may not see the error. The code still runs the error message just outputs every so often
 
 ## Contact
 If you have any questions feel free to contact me at `CMPAKNOW@ljmu.ac.uk`
