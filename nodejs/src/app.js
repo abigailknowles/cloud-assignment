@@ -280,6 +280,7 @@ async function startContainer(details) {
   try {
     await axios.post(`http://host.docker.internal:2375/containers/create?name=${details.Hostname}`, details);
     await axios.post(`http://host.docker.internal:2375/containers/${details.Hostname}/start`);
+    console.log("Creating / Starting Container: " + details.Hostname);
   } catch (error) {
     if (error.response.statusText === "Conflict") {
       console.log("already scaled out, action not required");
@@ -294,6 +295,7 @@ async function stopContainer(hostname) {
   try {
     await axios.post(`http://host.docker.internal:2375/containers/${hostname}/kill`);
     await axios.delete(`http://host.docker.internal:2375/containers/${hostname}`);
+    console.log("Stopping / Deleting Container: " + details.Hostname);
   } catch (error) {
     if (error.response.statusText === "Conflict") {
       console.log("already scaled in, action not required");

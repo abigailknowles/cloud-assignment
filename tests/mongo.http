@@ -1,0 +1,15 @@
+GET http://192.168.56.158:81
+
+###
+POST http://192.168.56.158:81 HTTP/1.1
+content-type: application/json
+
+{
+ "_id": 8,
+ "username": "lindaben",
+ "title_id": 8,
+ "user_action": "pause",
+ "date_and_time": "07/03/2022 11:26AM",
+ "point_of_interaction": "pause",
+ "type_of_interaction": "keyboard"
+}
