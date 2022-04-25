@@ -2,7 +2,7 @@
 
 ## Prerequisites
 ### Install Docker Desktop and enable WSL Integration
-1. To install Docker Desktop click here: https://docs.docker.com/desktop/windows/install/
+1. To install Docker Desktop click here: https://docs.docker.com/desktop/windows/install/ 
 2. Open the Docker Desktop settings and go to general and enable `Expose daemon on tcp://localhost:2375 without TLS`, this allows container to run axios posts to host.docker.internal, without this setting on windows with wsl linux containers the post requests fail with the `connection refused` error
 3. I ran these containers using Docker Desktop linux containers. You should not run these under Windows Containers as they may not work as expected
 
@@ -57,7 +57,7 @@
 - Once the solution is running
 - You should see a console.log of "CURRENT HOUR: {currentHour}", this tells you the current time in hours
 - The current hour is then used to check if the time is between 4 and 6, if it is you should see in Docker Desktop that containers will start getting stopped and started based on the HA requirments
-- This can either be tested during those hours, or to make it easier you can change the hours to something that suits your time of testing, the time configuration is on app.js on lines 311 and 324
+- This can either be tested during those hours, or to make it easier you can change the hours to something that suits your time of testing, the time configuration is declared in the scale up and down time variables found on lines 89 and 90
 
 ## TODOs
 Being transparent, this code still has a few intermitent bugs and I would have liked to have refactored/further developed some parts given I had more time. I have added TODO comments to identify the refactorisation changes I would have made and have identified any intermitent bugs below and explained why I believe it's happening

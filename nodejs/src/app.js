@@ -85,6 +85,9 @@ var seconds = getTimeInSeconds();
 var messageList = [];
 var scaledOut = false;
 var deadLetterQueue = [];
+//config variables for scaling up and down times - change these values if you want to test the auto-scailing
+var containerScaleUpTime = 15;
+var containerScaleDownTime = 17;
 
 function main() {
 
@@ -256,12 +259,14 @@ function getConfig() {
   }
 }
 
+// Purpose is to add a random number to the end of a container name
 function getRandomIntInclusive(min, max) {
   min = Math.ceil(min);
   max = Math.floor(max);
   return Math.floor(Math.random() * (max - min + 1) + min); //The maximum is inclusive and the minimum is inclusive
 }
 
+// TODO: Fix bug around containers not always starting up
 async function startContainer(details) {
   try {
     await axios.post(`http://host.docker.internal:2375/containers/create?name=${details.Hostname}`, details);
@@ -294,7 +299,7 @@ function scaleOut() {
     var currentHour = new Date().getHours();
     console.log("CURRENT HOUR: ", currentHour);
     //accounting for daylight saving
-    if (currentHour >= 15 && currentHour < 17) {
+    if (currentHour >= containerScaleUpTime && currentHour < containerScaleDownTime) {
 
       startContainer(getConfig());
       startContainer(getConfig());
@@ -308,10 +313,12 @@ function scaleIn() {
   if (scaledOut && isLeader) {
     var currentHour = new Date().getHours();
     //accounting for daylight saving
-    if (currentHour < 15 && currentHour >= 17) {
+    if (currentHour < containerScaleUpTime && currentHour >= containerScaleDownTime) {
       //removing item out of list at index 0 
-      var container1 = messageList.slice(-1)[0];
-      var container2 = messageList.slice(-2)[0];
+      //grabbing a random node each time to avoid getting and stopping the same node each time
+      var containers = messageList.slice(2);
+      var container1 = containers[0];
+      var container2 = containers[1];
 
       stopContainer(container1.Hostname);
       stopContainer(container2.Hostname);
