@@ -38,7 +38,7 @@ var analyticsSchema = new Schema({
 
 var analyticsModel = mongoose.model('Analytics', analyticsSchema, 'analytics');
 
-
+// API calls to the database
 app.get('/', (req, res) => {
   analyticsModel.find({}, 'username title_id user_action', (err, analytics) => {
     if (err) return handleError(err);
@@ -85,6 +85,7 @@ var seconds = getTimeInSeconds();
 var messageList = [];
 var scaledOut = false;
 
+// Seperate into seperate functions for readability and clean code
 function main() {
 
   setInterval(publishMessages, 5000);
@@ -100,6 +101,7 @@ function main() {
   setInterval(scaleIn, 5000);
 }
 
+// Publisher
 function publishMessages() {
   amqp.connect('amqp://user:bitnami@cloud_haproxy_1', function (error0, connection) {
 
@@ -114,6 +116,7 @@ function publishMessages() {
         throw error1;
       }
 
+      // Getting the current time in seconds to add to the message
       seconds = getTimeInSeconds();
       if (!isLeader) {
         seconds = seconds + 2
@@ -121,8 +124,11 @@ function publishMessages() {
         seconds = seconds - 2
       }
 
+      // The node has been seen in less than 20 seconds so is still alive
       isAlive = true;
 
+
+      // Outputting the current node details
       msg = `{"id": ${nodeId}, "hostname": "${hostname}", "isAlive": "${isAlive}", "lastSeenAlive": "${seconds}" }`;
 
       channel.assertExchange(exchange, 'fanout', {
@@ -139,6 +145,7 @@ function publishMessages() {
   });
 }
 
+// Subscriber
 function processMessages() {
   amqp.connect('amqp://user:bitnami@cloud_haproxy_1', function (error0, connection) {
     if (error0) {
@@ -160,6 +167,7 @@ function processMessages() {
         console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", q.queue);
         channel.bindQueue(q.queue, exchange, '');
 
+        // Consuming the node message
         channel.consume(q.queue, function (msg) {
           processMessage(msg);
         }, {
@@ -170,8 +178,10 @@ function processMessages() {
   });
 }
 
+// Outputting the subscriber to the console
 function processMessage(msg) {
   if (msg.content) {
+    // Only the leader can process the message
     if (isLeader) {
       console.log("PROCESSING MESSAGE: ", msg.content.toString())
     }
@@ -198,6 +208,7 @@ function getTimeInSeconds() {
 
 function selectNewLeader() {
   if (messageQueueStarted) {
+    // Identifying the highest node to elect a leader
     var currentHighestNodeId = 0;
     messageList.forEach(message => {
       //for consistency across all nodes we need to find the current highest node id value
@@ -231,6 +242,7 @@ function processDeadLetterQueue() {
   // TODO: could split these out into smaller functions
   for (let i = 0; i < deadLetterQueue.length; i++) {
     if (isLeader) {
+      // For every dead container, start a new one
       console.log(`STARTING NODE: ${deadLetterQueue[i].message.hostname}`);
       var details = {
         Image: "cloud_node1",
@@ -251,6 +263,7 @@ function processDeadLetterQueue() {
   }
 }
 
+// Creates a unique ID to get passed to container details to add to the hostname
 function getRandomIntInclusive(min, max) {
   min = Math.ceil(min);
   max = Math.floor(max);
@@ -279,9 +292,11 @@ var containerDetails = [{
 async function startContainer(details) {
   try {
     await axios.post(`http://host.docker.internal:2375/containers/create?name=${details.Hostname}`, details);
+    // TODO: Split these into seperate functions for readability
     await axios.post(`http://host.docker.internal:2375/containers/${details.Hostname}/start`);
     console.log("Creating / Starting Container: " + details.Hostname);
   } catch (error) {
+    // Error handling to avoid timing issue/race conditions
     if (error.response.statusText === "Conflict") {
       console.log("already scaled out, action not required");
     } else {
@@ -297,6 +312,7 @@ async function stopContainer(hostname) {
     await axios.delete(`http://host.docker.internal:2375/containers/${hostname}`);
     console.log("Stopping / Deleting Container: " + details.Hostname);
   } catch (error) {
+    // Error handling to avoid timing issue/race conditions
     if (error.response.statusText === "Conflict") {
       console.log("already scaled in, action not required");
     } else {

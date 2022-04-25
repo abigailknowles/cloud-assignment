@@ -51,6 +51,7 @@
 - Only the node which is a leader should be able to create/start containers which can be seen in Docker Desktop
 - A console log from the leader node should also output saying "Creating / Starting Container: " + details.Hostname"
 - But any node should be able to stop and kill containers, which can also be seen in Docker Desktop (I explain the reason for this in the implementation section of the report)
+- Everytime a container is killed they will get sent to a dead letter queue and a new container will be started as a result, you will see the current leader node outputting a message of "STARTING NODE: ${hostNameOfDeadContainer}", this helps ensure HA
 - A console log from a node should also output saying "Stopping / Deleting Container: " + details.Hostname"
 - This will happen between the hours of 4 and 6 but will also happen when a container is killed to ensure the containers never stop running
 - There is the edge case that you could see error handling when a node is trying to start/stop a container that no longer exists or is already running, this will return a console.log of "already scaled in/out, action not required"
