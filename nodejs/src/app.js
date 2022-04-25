@@ -327,6 +327,7 @@ function scaleOut() {
     var currentHour = new Date().getHours();
     console.log("CURRENT HOUR: ", currentHour);
     //accounting for daylight saving
+    //change the timing here if you want to test
     if (currentHour >= 15 && currentHour < 17) {
       containerDetails.forEach(details => {
         startContainer(details);
@@ -340,6 +341,7 @@ function scaleIn() {
   if (scaledOut && isLeader) {
     var currentHour = new Date().getHours();
     //accounting for daylight saving
+    //change the timing here if you want to test
     if (currentHour < 15 && currentHour >= 17) {
       //removing item out of list at index 0 
       var container1 = messageList.slice(-1)[0];
