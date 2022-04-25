@@ -38,7 +38,7 @@ var analyticsSchema = new Schema({
 
 var analyticsModel = mongoose.model('Analytics', analyticsSchema, 'analytics');
 
-// API calls to the database
+
 app.get('/', (req, res) => {
   analyticsModel.find({}, 'username title_id user_action', (err, analytics) => {
     if (err) return handleError(err);
@@ -80,13 +80,12 @@ var isAlive = false;
 var isLeader = false;
 var msg;
 var messageQueueStarted = false;
-// Generating a random node Id to ensure its unique
 var nodeId = Math.floor(Math.random() * (100 - 1 + 1) + 1);
 var seconds = getTimeInSeconds();
 var messageList = [];
 var scaledOut = false;
+var deadLetterQueue = [];
 
-// Seperate into seperate functions for readability and clean code
 function main() {
 
   setInterval(publishMessages, 5000);
@@ -95,14 +94,15 @@ function main() {
 
   setInterval(selectNewLeader, 2000);
 
-  setInterval(processDeadLetterQueue, 2000);
+  setInterval(createDeadLetterQueue, 2000);
+
+  setInterval(processDeadLetterQueue, 3000);
 
   setInterval(scaleOut, 5000);
 
   setInterval(scaleIn, 5000);
 }
 
-// Publisher
 function publishMessages() {
   amqp.connect('amqp://user:bitnami@cloud_haproxy_1', function (error0, connection) {
 
@@ -117,7 +117,6 @@ function publishMessages() {
         throw error1;
       }
 
-      // Getting the current time in seconds to add to the message
       seconds = getTimeInSeconds();
       if (!isLeader) {
         seconds = seconds + 2
@@ -125,11 +124,8 @@ function publishMessages() {
         seconds = seconds - 2
       }
 
-      // The node has been seen in less than 20 seconds so is still alive
       isAlive = true;
 
-
-      // Outputting the current node details
       msg = `{"id": ${nodeId}, "hostname": "${hostname}", "isAlive": "${isAlive}", "lastSeenAlive": "${seconds}" }`;
 
       channel.assertExchange(exchange, 'fanout', {
@@ -146,7 +142,6 @@ function publishMessages() {
   });
 }
 
-// Subscriber
 function processMessages() {
   amqp.connect('amqp://user:bitnami@cloud_haproxy_1', function (error0, connection) {
     if (error0) {
@@ -168,7 +163,6 @@ function processMessages() {
         console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", q.queue);
         channel.bindQueue(q.queue, exchange, '');
 
-        // Consuming the node message
         channel.consume(q.queue, function (msg) {
           processMessage(msg);
         }, {
@@ -179,13 +173,12 @@ function processMessages() {
   });
 }
 
-// Outputting the subscriber to the console
 function processMessage(msg) {
   if (msg.content) {
-    // Only the leader can process the message
     if (isLeader) {
       console.log("PROCESSING MESSAGE: ", msg.content.toString())
     }
+
     messageQueueStarted = true;
 
     var messageContent = JSON.parse(msg.content.toString());
@@ -209,7 +202,6 @@ function getTimeInSeconds() {
 
 function selectNewLeader() {
   if (messageQueueStarted) {
-    // Identifying the highest node to elect a leader
     var currentHighestNodeId = 0;
     messageList.forEach(message => {
       //for consistency across all nodes we need to find the current highest node id value
@@ -229,8 +221,7 @@ function selectNewLeader() {
   }
 }
 
-function processDeadLetterQueue() {
-  var deadLetterQueue = [];
+function createDeadLetterQueue() {
   Object.entries(messageList).forEach(([index, message]) => {
     if (Math.round(seconds - message.lastSeenAlive) > 20) {
       message.isAlive = false;
@@ -239,24 +230,13 @@ function processDeadLetterQueue() {
       message.isAlive = true;
     }
   });
-  //handle the dead letters
-  // TODO: could split these out into smaller functions
+}
+
+function processDeadLetterQueue() {
   for (let i = 0; i < deadLetterQueue.length; i++) {
     if (isLeader) {
-      // For every dead container, start a new one
       console.log(`STARTING NODE: ${deadLetterQueue[i].message.hostname}`);
-      var details = {
-        Image: "cloud_node1",
-        Hostname: "container" + getRandomIntInclusive(100, 999),
-        NetworkingConfig: {
-          EndpointsConfig: {
-            "cloud_nodejs": {},
-          }
-        }
-      }
-
-      startContainer(details);
-
+      startContainer(getConfig());
     }
 
     stopContainer(deadLetterQueue[i].message.hostname);
@@ -264,40 +244,29 @@ function processDeadLetterQueue() {
   }
 }
 
-// Creates a unique ID to get passed to container details to add to the hostname
+function getConfig() {
+  return {
+    Image: "cloud_node1",
+    Hostname: "container" + getRandomIntInclusive(100, 999),
+    NetworkingConfig: {
+      EndpointsConfig: {
+        "cloud_nodejs": {},
+      }
+    }
+  }
+}
+
 function getRandomIntInclusive(min, max) {
   min = Math.ceil(min);
   max = Math.floor(max);
   return Math.floor(Math.random() * (max - min + 1) + min); //The maximum is inclusive and the minimum is inclusive
 }
 
-var containerDetails = [{
-  Image: "cloud_node1",
-  Hostname: "container" + getRandomIntInclusive(100, 999),
-  NetworkingConfig: {
-    EndpointsConfig: {
-      "cloud_nodejs": {},
-    },
-  },
-
-}, {
-  Image: "cloud_node1",
-  Hostname: "container" + getRandomIntInclusive(100, 999),
-  NetworkingConfig: {
-    EndpointsConfig: {
-      "cloud_nodejs": {},
-    },
-  },
-}];
-
 async function startContainer(details) {
   try {
     await axios.post(`http://host.docker.internal:2375/containers/create?name=${details.Hostname}`, details);
-    // TODO: Split these into seperate functions for readability
     await axios.post(`http://host.docker.internal:2375/containers/${details.Hostname}/start`);
-    console.log("Creating / Starting Container: " + details.Hostname);
   } catch (error) {
-    // Error handling to avoid timing issue/race conditions
     if (error.response.statusText === "Conflict") {
       console.log("already scaled out, action not required");
     } else {
@@ -311,9 +280,7 @@ async function stopContainer(hostname) {
   try {
     await axios.post(`http://host.docker.internal:2375/containers/${hostname}/kill`);
     await axios.delete(`http://host.docker.internal:2375/containers/${hostname}`);
-    console.log("Stopping / Deleting Container: " + details.Hostname);
   } catch (error) {
-    // Error handling to avoid timing issue/race conditions
     if (error.response.statusText === "Conflict") {
       console.log("already scaled in, action not required");
     } else {
@@ -327,11 +294,11 @@ function scaleOut() {
     var currentHour = new Date().getHours();
     console.log("CURRENT HOUR: ", currentHour);
     //accounting for daylight saving
-    //change the timing here if you want to test
     if (currentHour >= 15 && currentHour < 17) {
-      containerDetails.forEach(details => {
-        startContainer(details);
-      })
+
+      startContainer(getConfig());
+      startContainer(getConfig());
+
       scaledOut = true;
     }
   }
@@ -341,7 +308,6 @@ function scaleIn() {
   if (scaledOut && isLeader) {
     var currentHour = new Date().getHours();
     //accounting for daylight saving
-    //change the timing here if you want to test
     if (currentHour < 15 && currentHour >= 17) {
       //removing item out of list at index 0 
       var container1 = messageList.slice(-1)[0];
