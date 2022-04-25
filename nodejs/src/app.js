@@ -80,6 +80,7 @@ var isAlive = false;
 var isLeader = false;
 var msg;
 var messageQueueStarted = false;
+// Generating a random node Id to ensure its unique
 var nodeId = Math.floor(Math.random() * (100 - 1 + 1) + 1);
 var seconds = getTimeInSeconds();
 var messageList = [];

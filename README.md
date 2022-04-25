@@ -6,20 +6,17 @@
 2. Open the Docker Desktop settings and go to general and enable `Expose daemon on tcp://localhost:2375 without TLS`, this allows container to run axios posts to host.docker.internal, without this setting on windows with wsl linux containers the post requests fail with the `connection refused` error
 3. I ran these containers using Docker Desktop linux containers. You should not run these under Windows Containers as they may not work as expected
 
-### Clone my solution
+### Clone my solution and run the code
 `Assuming you have already set up a folder to store my repository`
 1. Navigate to my repository
 2. Copy the project URL - https://github.com/abigailknowles/cloud-assignment.git
-3. Open up VS code and select 'clone repository'
-4. Enter my repo URL and the project will clone down
-
-## Running the code
-`Assuming you have completed the above step of 'clone my solution'`
-1. In VS code open the terminal by going to Terminal > New Terminal or select 'ctrl+shift+
-2. Navigate to the 'src directory' of my repo by running 'cd nodejs/src'
-3. Ensure there are no existing containers (which there shouldn't be) by running 'docker container rm  $(docker container ls -a -q) --force'
-4. Run 'npm i', to ensure all required packages are installed
-5. Finally, run the command 'docker-compose up --build'
+3. Open up VS code and open the power shell terminal
+4. Run 'git clone https://github.com/abigailknowles/cloud-assignment.git' and enter
+5. Once the repo has cloned navigate to the 'src directory' of my repo by running 'cd nodejs/src'
+6. Run 'npm i' in the terminal, to ensure all required packages are installed
+7. Ensure there are no existing containers (which there shouldn't be) by running 'docker container rm  $(docker container ls -a -q) --force'
+6. run 'docker-compose up --build'
+6. Open Docker Desktop and navigate to 'Containers / Apps', the solution should now be running
 
 ## Testing Features
 - `Ensure you have completed the above step of 'running the code' before you come onto these`
